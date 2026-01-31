@@ -310,7 +310,8 @@ export default function Game() {
     
     // Include non-moving tiles if we were only moving one tile
     if (tileId !== undefined) {
-      movedTiles.push(...newTiles.filter(t => t.id !== tileId));
+      const movedTileIds = new Set(movedTiles.map(t => t.id));
+      movedTiles.push(...newTiles.filter(t => t.id !== tileId && !movedTileIds.has(t.id)));
     }
     
     if (!moved) return;
