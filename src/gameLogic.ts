@@ -58,3 +58,38 @@ export function getEmptyPositions(
   
   return empty;
 }
+
+// Check if a number is a perfect square (n²)
+export function isPerfectSquare(n: number): boolean {
+  if (n <= 0) return false;
+  const sqrt = Math.sqrt(n);
+  return sqrt === Math.floor(sqrt);
+}
+
+// Check if a number is a perfect cube (n³)
+export function isPerfectCube(n: number): boolean {
+  if (n <= 0) return false;
+  const cbrt = Math.cbrt(n);
+  // Use a small epsilon to handle floating point precision
+  const rounded = Math.round(cbrt);
+  return Math.abs(rounded ** 3 - n) < 0.0001;
+}
+
+// Check if two equal numbers form a perfect power (square or cube)
+// Returns the type of power if they do, null otherwise
+export function checkPerfectPowerElimination(value1: number, value2: number): 'square' | 'cube' | null {
+  // Only check if both values are equal
+  if (value1 !== value2) return null;
+  
+  // Check for perfect square (e.g., 4, 9, 16, 25)
+  if (isPerfectSquare(value1)) {
+    return 'square';
+  }
+  
+  // Check for perfect cube (e.g., 8, 27, 64, 125)
+  if (isPerfectCube(value1)) {
+    return 'cube';
+  }
+  
+  return null;
+}

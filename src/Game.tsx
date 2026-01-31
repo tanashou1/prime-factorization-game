@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import './Game.css';
 import type { Tile, GameState, GameParams } from './types';
-import { generateRandomTileValue, isDivisor, getEmptyPositions } from './gameLogic';
+import { generateRandomTileValue, isDivisor, getEmptyPositions, checkPerfectPowerElimination } from './gameLogic';
 
 type Direction = 'up' | 'down' | 'left' | 'right';
 
@@ -123,7 +123,46 @@ export default function Game() {
             
             const otherTile = currentTiles[j];
             if (otherTile.row === adjRow && otherTile.col === adjCol) {
-              // Check if they can merge
+              // First check for perfect power elimination (Issue #16)
+              const powerType = checkPerfectPowerElimination(tile.value, otherTile.value);
+              if (powerType !== null) {
+                // Both tiles disappear with special animation
+                const mergedScore = tile.value * 2; // Score both tiles
+                const currentMultiplier = chainMultiplier * Math.pow(2, chainCount);
+                totalScoreGained += mergedScore * currentMultiplier;
+                
+                chainCount++;
+                
+                // Mark both tiles as disappearing with power elimination animation
+                newTiles.push({
+                  ...tile,
+                  id: currentTileId++,
+                  value: 0,
+                  scoreValue: tile.value,
+                  isDisappearing: true,
+                  isChaining: true,
+                  isPowerEliminating: true,
+                  powerType: powerType,
+                });
+                newTiles.push({
+                  ...otherTile,
+                  id: currentTileId++,
+                  value: 0,
+                  scoreValue: otherTile.value,
+                  isDisappearing: true,
+                  isChaining: true,
+                  isPowerEliminating: true,
+                  powerType: powerType,
+                });
+                
+                processed.add(i);
+                processed.add(j);
+                merged = true;
+                hasChanges = true;
+                break;
+              }
+              
+              // Check if they can merge normally
               let larger, smaller;
               if (tile.value > otherTile.value) {
                 larger = tile;
@@ -272,7 +311,47 @@ export default function Game() {
         const occupant = occupiedPositions.get(posKey);
         
         if (occupant) {
-          // Check if they can merge
+          // First check for perfect power elimination (Issue #16)
+          const powerType = checkPerfectPowerElimination(tile.value, occupant.value);
+          if (powerType !== null) {
+            // Both tiles disappear with special animation
+            
+            occupiedPositions.delete(posKey);
+            path.push({row: nextRow, col: nextCol});
+            
+            // Track that these tiles merged (use original IDs)
+            mergedTileIds.add(tile.id);
+            mergedTileIds.add(occupant.id);
+            
+            // Add both disappearing tiles with power elimination animation
+            movedTiles.push({
+              ...tile,
+              id: currentNextTileId++,
+              value: 0,
+              scoreValue: tile.value,
+              row: nextRow,
+              col: nextCol,
+              isDisappearing: true,
+              isPowerEliminating: true,
+              powerType: powerType,
+            });
+            movedTiles.push({
+              ...occupant,
+              id: currentNextTileId++,
+              value: 0,
+              scoreValue: occupant.value,
+              row: nextRow,
+              col: nextCol,
+              isDisappearing: true,
+              isPowerEliminating: true,
+              powerType: powerType,
+            });
+            
+            moved = true;
+            break;
+          }
+          
+          // Check if they can merge normally
           if (isDivisor(tile.value, occupant.value)) {
             // Merge: tile divides into occupant
             const newValue = occupant.value / tile.value;
@@ -514,6 +593,8 @@ export default function Game() {
             isDividing: false,
             isChaining: false,
             isNew: false,
+            isPowerEliminating: false,
+            powerType: undefined,
           }));
         
         return {
@@ -666,7 +747,7 @@ export default function Game() {
         {gameState.tiles.map(tile => (
           <div
             key={tile.id}
-            className={`tile ${tile.isNew ? 'tile-new' : ''} ${tile.isMoving ? 'tile-moving' : ''} ${tile.isDividing ? 'tile-dividing' : ''} ${tile.isChaining ? 'tile-chaining' : ''} ${tile.isDisappearing ? 'tile-disappearing' : ''}`}
+            className={`tile ${tile.isNew ? 'tile-new' : ''} ${tile.isMoving ? 'tile-moving' : ''} ${tile.isDividing ? 'tile-dividing' : ''} ${tile.isChaining ? 'tile-chaining' : ''} ${tile.isDisappearing ? 'tile-disappearing' : ''} ${tile.isPowerEliminating ? 'tile-power-eliminating' : ''} ${tile.powerType === 'square' ? 'tile-power-square' : ''} ${tile.powerType === 'cube' ? 'tile-power-cube' : ''}`}
             style={{
               gridColumn: tile.col + 1,
               gridRow: tile.row + 1,

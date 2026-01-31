@@ -9,6 +9,8 @@ export interface Tile {
   isChaining?: boolean; // Track if tile is part of a chain reaction
   isNew?: boolean; // Track if tile is newly spawned (for appear animation)
   isDisappearing?: boolean; // Track if tile is disappearing (value became 0)
+  isPowerEliminating?: boolean; // Track if tile is disappearing due to perfect power (square/cube)
+  powerType?: 'square' | 'cube'; // Type of perfect power elimination
 }
 
 export interface GameState {
