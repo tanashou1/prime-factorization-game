@@ -65,7 +65,7 @@ h1 {
 }
 
 .tile-moving {
-  transition: all 0.1s linear;
+  transition: all 0.08s linear;
 }
 
 .tile-dividing {

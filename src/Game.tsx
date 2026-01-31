@@ -372,7 +372,8 @@ export default function Game() {
     if (!moved) return;
     
     // Animate tiles through intermediate positions
-    const maxPathLength = Math.max(...Array.from(tileMovementPaths.values()).map(p => p.length), 0);
+    const pathLengths = Array.from(tileMovementPaths.values()).map(p => p.length);
+    const maxPathLength = pathLengths.length > 0 ? Math.max(...pathLengths) : 0;
     
     for (let step = 1; step < maxPathLength; step++) {
       const intermediateState = movedTiles.map(tile => {
@@ -394,8 +395,8 @@ export default function Game() {
         tiles: intermediateState,
       }));
       
-      // Wait for step animation (100ms per step for smooth movement)
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Wait for step animation (80ms per step for smooth movement)
+      await new Promise(resolve => setTimeout(resolve, 80));
     }
     
     // Calculate score from disappearing tiles but KEEP them for animation
@@ -411,8 +412,8 @@ export default function Game() {
       moveCount: newMoveCount,
     });
     
-    // Wait for final position animation to complete
-    await new Promise(resolve => setTimeout(resolve, 200));
+    // Wait for final position CSS transition to complete (100ms)
+    await new Promise(resolve => setTimeout(resolve, 100));
     
     // Now process chain reactions step by step
     const activeTiles = movedTiles.filter(t => t.value !== 0);
