@@ -87,13 +87,13 @@ export default function Game() {
   }, [params.n, params.p]);
 
   // Process chain reactions - returns array of steps to animate
-  const processChainReactions = useCallback((tiles: Tile[], chainMultiplier: number = 1): { tiles: Tile[], scoreGained: number, chainCount: number, chainSteps: Tile[][], nextTileId: number } => {
+  const processChainReactions = useCallback((tiles: Tile[], chainMultiplier: number = 1, startTileId: number): { tiles: Tile[], scoreGained: number, chainCount: number, chainSteps: Tile[][], nextTileId: number } => {
     let currentTiles = [...tiles];
     let totalScoreGained = 0;
     let hasChanges = true;
     let chainCount = 0;
     const chainSteps: Tile[][] = []; // Store each step for animation
-    let currentTileId = nextTileId;
+    let currentTileId = startTileId;
     
     while (hasChanges) {
       hasChanges = false;
@@ -197,13 +197,13 @@ export default function Game() {
     
     // Return the next available tile ID
     return { tiles: finalTiles, scoreGained: totalScoreGained, chainCount, chainSteps, nextTileId: currentTileId };
-  }, [nextTileId]);
+  }, []);
 
   // Move tiles in a direction
   const moveTiles = useCallback(async (direction: Direction, tileId?: number) => {
     const { tiles: currentTiles, score, moveCount } = gameState;
-    // Filter out any stale disappearing tiles before starting
-    const newTiles = [...currentTiles.filter(t => t.value !== 0)];
+    // Filter out any stale tiles (disappearing tiles with value 0, or tiles with animation flags that should be gone)
+    const newTiles = [...currentTiles.filter(t => t.value !== 0 && !t.isDisappearing)];
     let moved = false;
     let currentNextTileId = nextTileId; // Local counter for new tile IDs
     
@@ -438,7 +438,7 @@ export default function Game() {
     
     // Now process chain reactions step by step
     const activeTiles = movedTiles.filter(t => t.value !== 0);
-    const chainResult = processChainReactions(activeTiles, 1);
+    const chainResult = processChainReactions(activeTiles, 1, currentNextTileId);
     
     // Update currentNextTileId from chain reactions
     currentNextTileId = chainResult.nextTileId;
