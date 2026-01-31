@@ -98,11 +98,11 @@ export function checkPerfectPowerElimination(value1: number, value2: number): 's
 }
 
 // Check if a tile can be factored by multiple adjacent tiles (Issue #5)
-// Returns the tiles that can divide the center tile and their division result
+// Returns the tiles that can divide the center tile
 export function checkMultiTileFactorization(
   centerTile: { value: number; row: number; col: number },
   adjacentTiles: Array<{ value: number; row: number; col: number; id: number }>
-): { canFactor: boolean; factorTiles: Array<{ id: number; value: number; newValue: number }> } | null {
+): { canFactor: boolean; factorTiles: Array<{ id: number; value: number }> } | null {
   // We need at least 2 adjacent tiles for multi-tile factorization
   if (adjacentTiles.length < 2) return null;
   
@@ -118,12 +118,10 @@ export function checkMultiTileFactorization(
       
       // Check if this product exactly divides the center tile
       if (centerTile.value % product === 0) {
-        // Calculate the GCD of each tile in the combination
-        // Each tile should be divided by itself (which makes it 1)
+        // Each factor tile becomes 1 (then disappears)
         const factorTiles = combination.map(tile => ({
           id: tile.id,
           value: tile.value,
-          newValue: 1, // Each factor tile becomes 1 (then disappears)
         }));
         
         return {

@@ -141,6 +141,7 @@ export default function Game() {
         }
         
         // Check for multi-tile factorization if we have multiple adjacent tiles
+        let multiTileFactored = false;
         if (adjacentTiles.length >= 2) {
           const factorResult = checkMultiTileFactorization(
             { value: tile.value, row: tile.row, col: tile.col },
@@ -184,9 +185,12 @@ export default function Game() {
             // Mark center tile as processed
             processed.add(i);
             
+            // Build a map from id to index for efficient lookup
+            const idToIndexMap = new Map(adjacentTiles.map(at => [at.id, at.index]));
+            
             // Update each factor tile (they all become 1 and disappear)
             for (const factorTile of factorResult.factorTiles) {
-              const factorIndex = adjacentTiles.find(at => at.id === factorTile.id)?.index;
+              const factorIndex = idToIndexMap.get(factorTile.id);
               if (factorIndex !== undefined) {
                 processed.add(factorIndex);
                 totalScoreGained += factorTile.value * currentMultiplier;
@@ -203,12 +207,12 @@ export default function Game() {
               }
             }
             
-            merged = true;
+            multiTileFactored = true;
             hasChanges = true;
           }
         }
         
-        if (merged) {
+        if (multiTileFactored) {
           continue; // Skip regular merge checks if multi-tile factorization occurred
         }
         
