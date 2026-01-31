@@ -2,8 +2,11 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import './Game.css';
 import type { Tile, GameState, GameParams } from './types';
 import { generateRandomTileValue, isDivisor, getEmptyPositions, checkPerfectPowerElimination } from './gameLogic';
+import packageJson from '../package.json';
 
 type Direction = 'up' | 'down' | 'left' | 'right';
+
+const VERSION = packageJson.version;
 
 const DEFAULT_PARAMS: GameParams = {
   n: 4,  // 4x4 board
@@ -786,7 +789,7 @@ export default function Game() {
 
   return (
     <div className="game">
-      <h1>素因数分解ゲーム</h1>
+      <h1>素因数分解ゲーム <span className="version">v{VERSION}</span></h1>
       
       <div className="game-info">
         <div className="score">Score: {gameState.score}</div>
