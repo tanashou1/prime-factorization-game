@@ -419,6 +419,7 @@ export default function Game() {
             const mergedScore = Math.max(tile.value, occupant.value);
             
             occupiedPositions.delete(posKey);
+            path.push({row: nextRow, col: nextCol});
             
             // Track that these tiles merged (use original IDs)
             mergedTileIds.add(tile.id);
@@ -433,8 +434,8 @@ export default function Game() {
                 id: mergedTileId, // Assign unique ID to merged tile
                 value: 0,
                 scoreValue: mergedScore,
-                row: newRow,
-                col: newCol,
+                row: nextRow,
+                col: nextCol,
                 isDividing: true, // Mark for division effect
                 isDisappearing: true, // Mark for disappear animation
               });
@@ -444,12 +445,12 @@ export default function Game() {
                 id: mergedTileId, // Assign unique ID to merged tile
                 value: newValue,
                 scoreValue: mergedScore,
-                row: newRow,
-                col: newCol,
+                row: nextRow,
+                col: nextCol,
                 isDividing: true, // Mark for division effect
               };
               movedTiles.push(mergedTile);
-              occupiedPositions.set(`${newRow},${newCol}`, mergedTile);
+              occupiedPositions.set(posKey, mergedTile);
             }
             
             // Store path for the new merged tile ID  
