@@ -233,13 +233,17 @@ export default function Game() {
       });
     }
     
+    // Calculate movement direction
+    const dr = direction === 'up' ? -1 : direction === 'down' ? 1 : 0;
+    const dc = direction === 'left' ? -1 : direction === 'right' ? 1 : 0;
+    
+    // Store intermediate positions for each tile
+    const tileMovementPaths = new Map<number, Array<{row: number, col: number}>>();
+    
     for (const tile of sorted) {
       let newRow = tile.row;
       let newCol = tile.col;
-      
-      // Calculate movement direction
-      const dr = direction === 'up' ? -1 : direction === 'down' ? 1 : 0;
-      const dc = direction === 'left' ? -1 : direction === 'right' ? 1 : 0;
+      const path: Array<{row: number, col: number}> = [{row: newRow, col: newCol}];
       
       // Move as far as possible
       while (true) {
@@ -264,6 +268,7 @@ export default function Game() {
             const mergedScore = Math.max(tile.value, occupant.value);
             
             occupiedPositions.delete(posKey);
+            path.push({row: nextRow, col: nextCol});
             
             if (newValue === 1) {
               // Tile disappears, add score - mark with isDisappearing
@@ -337,6 +342,7 @@ export default function Game() {
         // Move to next position
         newRow = nextRow;
         newCol = nextCol;
+        path.push({row: newRow, col: newCol});
       }
       
       // Place tile at final position if it hasn't merged
@@ -350,6 +356,11 @@ export default function Game() {
         movedTiles.push(finalTile);
         occupiedPositions.set(posKey, finalTile);
       }
+      
+      // Store the path for this tile
+      if (path.length > 1) {
+        tileMovementPaths.set(tile.id, path);
+      }
     }
     
     // Include non-moving tiles if we were only moving one tile
@@ -360,27 +371,51 @@ export default function Game() {
     
     if (!moved) return;
     
+    // Animate tiles through intermediate positions
+    const maxPathLength = Math.max(...Array.from(tileMovementPaths.values()).map(p => p.length), 0);
+    
+    for (let step = 1; step < maxPathLength; step++) {
+      const intermediateState = movedTiles.map(tile => {
+        const path = tileMovementPaths.get(tile.id);
+        if (path && step < path.length) {
+          return { ...tile, row: path[step].row, col: path[step].col, isMoving: true };
+        }
+        return tile;
+      });
+      
+      // Include non-moving tiles
+      if (tileId !== undefined) {
+        const movedTileIds = new Set(movedTiles.map(t => t.id));
+        intermediateState.push(...newTiles.filter(t => t.id !== tileId && !movedTileIds.has(t.id)));
+      }
+      
+      setGameState(prev => ({
+        ...prev,
+        tiles: intermediateState,
+      }));
+      
+      // Wait for step animation (100ms per step for smooth movement)
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
     // Calculate score from disappearing tiles but KEEP them for animation
     const disappearingTiles = movedTiles.filter(t => t.value === 0);
     let scoreGained = disappearingTiles.reduce((sum, t) => sum + (t.scoreValue || 0), 0);
     
-    // Keep all tiles including disappearing ones for now
-    let allTiles = movedTiles;
-    
     const newMoveCount = moveCount + 1;
     
-    // First, show the initial move result
+    // Show the final move result
     setGameState({
-      tiles: allTiles,
+      tiles: movedTiles,
       score: score + scoreGained,
       moveCount: newMoveCount,
     });
     
-    // Wait for movement animation to complete
-    await new Promise(resolve => setTimeout(resolve, 300));
+    // Wait for final position animation to complete
+    await new Promise(resolve => setTimeout(resolve, 200));
     
     // Now process chain reactions step by step
-    const activeTiles = allTiles.filter(t => t.value !== 0);
+    const activeTiles = movedTiles.filter(t => t.value !== 0);
     const chainResult = processChainReactions(activeTiles, 1);
     
     // Update currentNextTileId from chain reactions
