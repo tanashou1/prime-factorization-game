@@ -87,12 +87,14 @@ export default function Game() {
     return [...tiles, newTile];
   }, [nextTileId, params.n, params.p]);
 
-  // Process chain reactions
-  const processChainReactions = useCallback((tiles: Tile[], chainMultiplier: number = 1): { tiles: Tile[], scoreGained: number, chainCount: number } => {
+  // Process chain reactions - returns array of steps to animate
+  const processChainReactions = useCallback((tiles: Tile[], chainMultiplier: number = 1): { tiles: Tile[], scoreGained: number, chainCount: number, chainSteps: Tile[][] } => {
     let currentTiles = [...tiles];
     let totalScoreGained = 0;
     let hasChanges = true;
     let chainCount = 0;
+    const chainSteps: Tile[][] = []; // Store each step for animation
+    let currentTileId = nextTileId;
     
     while (hasChanges) {
       hasChanges = false;
@@ -145,16 +147,20 @@ export default function Game() {
                 if (newValue === 1) {
                   totalScoreGained += mergedScore * currentMultiplier;
                   // Mark as disappearing instead of removing immediately
+                  // Assign NEW unique ID to prevent duplicate key errors
                   newTiles.push({
                     ...larger,
+                    id: currentTileId++, // Unique ID for merged tile
                     value: 0,
                     scoreValue: mergedScore,
                     isDisappearing: true,
                     isChaining: true,
                   });
                 } else {
+                  // Assign NEW unique ID to prevent duplicate key errors
                   newTiles.push({
                     ...larger,
+                    id: currentTileId++, // Unique ID for merged tile
                     value: newValue,
                     scoreValue: mergedScore,
                     isChaining: true, // Mark as part of chain for animation
@@ -179,13 +185,21 @@ export default function Game() {
       }
       
       currentTiles = newTiles;
+      
+      // Store this step if changes occurred
+      if (hasChanges) {
+        chainSteps.push([...currentTiles]);
+      }
     }
     
-    return { tiles: currentTiles, scoreGained: totalScoreGained, chainCount };
-  }, []);
+    // Update nextTileId ref
+    setNextTileId(currentTileId);
+    
+    return { tiles: currentTiles, scoreGained: totalScoreGained, chainCount, chainSteps };
+  }, [nextTileId]);
 
   // Move tiles in a direction
-  const moveTiles = useCallback((direction: Direction, tileId?: number) => {
+  const moveTiles = useCallback(async (direction: Direction, tileId?: number) => {
     const { tiles: currentTiles, score, moveCount } = gameState;
     const newTiles = [...currentTiles];
     let moved = false;
@@ -193,6 +207,7 @@ export default function Game() {
     // Clear any pending animation timeouts
     if (animationTimeoutRef.current) {
       clearTimeout(animationTimeoutRef.current);
+      animationTimeoutRef.current = null;
     }
     
     // If tileId is specified, only move that tile
@@ -350,38 +365,58 @@ export default function Game() {
     // Keep all tiles including disappearing ones for now
     let allTiles = movedTiles;
     
-    // Process chain reactions with chain multiplier
-    const chainResult = processChainReactions(allTiles.filter(t => t.value !== 0), 1);
-    
-    // Combine non-disappearing tiles with chain result
-    allTiles = [...disappearingTiles, ...chainResult.tiles];
-    scoreGained += chainResult.scoreGained;
-    
-    // Calculate animation duration based on chain count and disappearing tiles
-    const hasDisappearing = disappearingTiles.length > 0;
-    const baseDelay = 300; // Base delay for movement
-    const chainDelay = chainResult.chainCount > 0 ? 500 + (chainResult.chainCount * 300) : 0;
-    const disappearDelay = hasDisappearing ? 500 : 0;
-    const totalAnimationDelay = Math.max(baseDelay, chainDelay, disappearDelay);
-    
     const newMoveCount = moveCount + 1;
     
+    // First, show the initial move result
+    setGameState({
+      tiles: allTiles,
+      score: score + scoreGained,
+      moveCount: newMoveCount,
+    });
+    
+    // Wait for movement animation to complete
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    // Now process chain reactions step by step
+    const activeTiles = allTiles.filter(t => t.value !== 0);
+    const chainResult = processChainReactions(activeTiles, 1);
+    
+    scoreGained += chainResult.scoreGained;
+    
+    // Animate each chain step
+    for (let i = 0; i < chainResult.chainSteps.length; i++) {
+      const stepTiles = chainResult.chainSteps[i];
+      
+      // Update state with this chain step
+      setGameState(prevState => ({
+        ...prevState,
+        tiles: [...disappearingTiles, ...stepTiles],
+        score: score + scoreGained,
+      }));
+      
+      // Wait for chain animation to complete
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    
+    // Get final tiles after all chains
+    let finalTiles = [...disappearingTiles, ...chainResult.tiles];
+    
     // Add new tile if needed
-    let finalTiles = allTiles;
+    const hasDisappearing = disappearingTiles.length > 0;
     if (newMoveCount % params.k === 0 || hasDisappearing) {
       // Add new tile but preserve disappearing tiles for animation
-      const newTilesWithoutDisappearing = addNewTile(allTiles.filter(t => t.value !== 0));
+      const newTilesWithoutDisappearing = addNewTile(chainResult.tiles);
       finalTiles = [...disappearingTiles, ...newTilesWithoutDisappearing];
     }
     
-    // Set state with all tiles including those that will disappear
+    // Set final state with all tiles including those that will disappear
     setGameState({
       tiles: finalTiles,
       score: score + scoreGained,
       moveCount: newMoveCount,
     });
     
-    // Clear animation flags and remove disappearing tiles after animation completes
+    // Remove disappearing tiles after their animation
     animationTimeoutRef.current = window.setTimeout(() => {
       setGameState(prevState => {
         // First filter out disappeared tiles, then clear flags
@@ -398,8 +433,8 @@ export default function Game() {
           tiles: activeTiles,
         };
       });
-    }, totalAnimationDelay);
-  }, [gameState, params, addNewTile, processChainReactions]);
+    }, 500); // Time for disappearing animation
+  }, [gameState, params, addNewTile, processChainReactions, nextTileId]);
 
   // Handle keyboard input
   useEffect(() => {
