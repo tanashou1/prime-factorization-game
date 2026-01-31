@@ -66,13 +66,16 @@ export function isPerfectSquare(n: number): boolean {
   return sqrt === Math.floor(sqrt);
 }
 
+// Epsilon for floating point precision comparisons
+const FLOAT_PRECISION_EPSILON = 0.0001;
+
 // Check if a number is a perfect cube (n³)
 export function isPerfectCube(n: number): boolean {
   if (n <= 0) return false;
   const cbrt = Math.cbrt(n);
   // Use a small epsilon to handle floating point precision
   const rounded = Math.round(cbrt);
-  return Math.abs(rounded ** 3 - n) < 0.0001;
+  return Math.abs(rounded ** 3 - n) < FLOAT_PRECISION_EPSILON;
 }
 
 // Check if two equal numbers form a perfect power (square or cube)

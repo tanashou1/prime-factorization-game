@@ -16,10 +16,10 @@ export default function Game() {
   const [params, setParams] = useState<GameParams>(DEFAULT_PARAMS);
   const [tempParams, setTempParams] = useState<GameParams>(DEFAULT_PARAMS);
   const [nextTileId, setNextTileId] = useState(DEFAULT_PARAMS.m); // Start with m tiles already created
-  const [isAnimating, setIsAnimating] = useState(false); // Track if animations are in progress
   const boardRef = useRef<HTMLDivElement>(null);
   const animationTimeoutRef = useRef<number | null>(null);
   const tilesRef = useRef<Tile[]>([]);
+  const isAnimatingRef = useRef(false); // Use ref to track animation state without causing re-renders
 
   // Initialize game state based on params
   const [gameState, setGameState] = useState<GameState>(() => {
@@ -128,7 +128,8 @@ export default function Game() {
               const powerType = checkPerfectPowerElimination(tile.value, otherTile.value);
               if (powerType !== null) {
                 // Both tiles disappear with special animation
-                const mergedScore = tile.value * 2; // Score both tiles
+                // Score: Sum of both identical tile values
+                const mergedScore = tile.value * 2;
                 const currentMultiplier = chainMultiplier * Math.pow(2, chainCount);
                 totalScoreGained += mergedScore * currentMultiplier;
                 
@@ -244,9 +245,9 @@ export default function Game() {
   // Move tiles in a direction
   const moveTiles = useCallback(async (direction: Direction, tileId?: number) => {
     // Prevent moves during animations (Issue #17)
-    if (isAnimating) return;
+    if (isAnimatingRef.current) return;
     
-    setIsAnimating(true); // Set animation flag at start
+    isAnimatingRef.current = true; // Set animation flag at start
     
     const { tiles: currentTiles, score, moveCount } = gameState;
     // Filter out any stale tiles (disappearing tiles with value 0, or tiles with animation flags that should be gone)
@@ -493,7 +494,7 @@ export default function Game() {
     }
     
     if (!moved) {
-      setIsAnimating(false); // Clear animation flag if no move
+      isAnimatingRef.current = false; // Clear animation flag if no move
       return;
     }
     
@@ -623,9 +624,9 @@ export default function Game() {
       });
       
       // Clear animation flag after all animations complete
-      setIsAnimating(false);
+      isAnimatingRef.current = false;
     }, 100); // Short delay to clear flags
-  }, [gameState, params, addNewTile, processChainReactions, nextTileId, isAnimating]);
+  }, [gameState, params, addNewTile, processChainReactions, nextTileId]);
 
   // Handle keyboard input
   useEffect(() => {
@@ -771,7 +772,7 @@ export default function Game() {
   // Manual tile generation (Issue #17)
   const handleGenerateTile = () => {
     // Don't generate during animations
-    if (isAnimating) return;
+    if (isAnimatingRef.current) return;
     
     const result = addNewTile(gameState.tiles, nextTileId);
     if (result.tiles.length > gameState.tiles.length) {
