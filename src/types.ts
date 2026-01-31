@@ -4,6 +4,9 @@ export interface Tile {
   row: number;
   col: number;
   scoreValue?: number; // Track original product for scoring when tile becomes 1
+  isMoving?: boolean; // Track if tile is currently moving
+  isDividing?: boolean; // Track if tile just divided
+  isChaining?: boolean; // Track if tile is part of a chain reaction
 }
 
 export interface GameState {
