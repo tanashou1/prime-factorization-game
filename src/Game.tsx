@@ -203,7 +203,8 @@ export default function Game() {
   const moveTiles = useCallback(async (direction: Direction, tileId?: number) => {
     const { tiles: currentTiles, score, moveCount } = gameState;
     // Filter out any stale tiles (disappearing tiles with value 0, or tiles with animation flags that should be gone)
-    const newTiles = [...currentTiles.filter(t => t.value !== 0 && !t.isDisappearing)];
+    // This ensures no lingering tiles from previous moves
+    const newTiles = [...currentTiles.filter(t => t.value > 0 && !t.isDisappearing)];
     let moved = false;
     let currentNextTileId = nextTileId; // Local counter for new tile IDs
     
@@ -449,10 +450,14 @@ export default function Game() {
     for (let i = 0; i < chainResult.chainSteps.length; i++) {
       const stepTiles = chainResult.chainSteps[i];
       
-      // Update state with this chain step, including disappearing tiles for visual feedback
+      // Update state with this chain step
+      // Only include disappearing tiles if this is the first step to show the disappear animation
+      // Otherwise they should be gone by now
+      const tilesToShow = i === 0 ? [...disappearingTiles, ...stepTiles] : stepTiles;
+      
       setGameState(prevState => ({
         ...prevState,
-        tiles: [...disappearingTiles, ...stepTiles],
+        tiles: tilesToShow,
         score: score + scoreGained,
       }));
       
@@ -461,12 +466,13 @@ export default function Game() {
     }
     
     // After chains complete, remove disappearing tiles and add new tile if needed
-    let finalTiles = chainResult.tiles;
+    // Ensure finalTiles contains no disappearing tiles or zero-value tiles
+    let finalTiles = chainResult.tiles.filter(t => t.value > 0 && !t.isDisappearing);
     
     // Add new tile if needed
     const hasDisappearing = disappearingTiles.length > 0;
     if (newMoveCount % params.k === 0 || hasDisappearing) {
-      const newTileResult = addNewTile(chainResult.tiles, currentNextTileId);
+      const newTileResult = addNewTile(finalTiles, currentNextTileId);
       finalTiles = newTileResult.tiles;
       currentNextTileId = newTileResult.nextId;
     }
@@ -484,9 +490,9 @@ export default function Game() {
     // Clear animation flags after a short delay
     animationTimeoutRef.current = window.setTimeout(() => {
       setGameState(prevState => {
-        // Clear animation flags and ensure no zero-value tiles remain
+        // Clear animation flags and ensure no zero-value or disappearing tiles remain
         const clearedTiles = prevState.tiles
-          .filter(t => t.value !== 0)
+          .filter(t => t.value > 0 && !t.isDisappearing)
           .map(t => ({
             ...t,
             isMoving: false,
