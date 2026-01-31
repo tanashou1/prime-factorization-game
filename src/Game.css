@@ -11,6 +11,12 @@ h1 {
   margin-bottom: 20px;
 }
 
+.version {
+  font-size: 0.4em;
+  color: #888;
+  font-weight: normal;
+}
+
 .game-info {
   display: flex;
   justify-content: center;
@@ -35,9 +41,8 @@ h1 {
   padding: 20px;
   background-color: #bbada0;
   border-radius: 10px;
-  width: fit-content;
-  min-width: 400px;
-  min-height: 400px;
+  width: 400px;
+  height: 400px;
   position: relative;
   /* Prevent pull-to-refresh and enable swipe gestures */
   touch-action: none;
@@ -386,8 +391,8 @@ button:active {
 
 @media (max-width: 768px) {
   .board {
-    min-width: 300px;
-    min-height: 300px;
+    width: 300px;
+    height: 300px;
   }
   
   .tile {
