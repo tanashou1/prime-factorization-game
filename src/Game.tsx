@@ -17,6 +17,8 @@ export default function Game() {
   const [tempParams, setTempParams] = useState<GameParams>(DEFAULT_PARAMS);
   const [nextTileId, setNextTileId] = useState(0);
   const boardRef = useRef<HTMLDivElement>(null);
+  const animationTimeoutRef = useRef<number | null>(null);
+  const tilesRef = useRef<Tile[]>([]);
 
   // Initialize game state based on params
   const [gameState, setGameState] = useState<GameState>(() => {
@@ -37,6 +39,11 @@ export default function Game() {
     
     return { tiles, score: 0, moveCount: 0 };
   });
+
+  // Update tilesRef whenever gameState changes
+  useEffect(() => {
+    tilesRef.current = gameState.tiles;
+  }, [gameState.tiles]);
 
   // Initialize game
   const initGame = useCallback(() => {
@@ -126,7 +133,9 @@ export default function Game() {
               
               if (isDivisor(smaller.value, larger.value)) {
                 const newValue = larger.value / smaller.value;
-                // Use the larger number as score (changed from product)
+                // Score calculation: Use the larger number instead of the product
+                // This prevents score inflation and makes gameplay more balanced
+                // (e.g., 2 merging with 2 gives score of 2, not 4)
                 const mergedScore = Math.max(larger.value, smaller.value);
                 const currentMultiplier = chainMultiplier * Math.pow(2, chainCount);
                 
@@ -171,6 +180,11 @@ export default function Game() {
     const { tiles: currentTiles, score, moveCount } = gameState;
     const newTiles = [...currentTiles];
     let moved = false;
+    
+    // Clear any pending animation timeouts
+    if (animationTimeoutRef.current) {
+      clearTimeout(animationTimeoutRef.current);
+    }
     
     // If tileId is specified, only move that tile
     const tilesToMove = tileId !== undefined 
@@ -223,7 +237,8 @@ export default function Game() {
           if (isDivisor(tile.value, occupant.value)) {
             // Merge: tile divides into occupant
             const newValue = occupant.value / tile.value;
-            // Use the larger number as score (changed from product)
+            // Score calculation: Use the larger number instead of the product
+            // This prevents score inflation and makes gameplay more balanced
             const mergedScore = Math.max(tile.value, occupant.value);
             
             occupiedPositions.delete(posKey);
@@ -255,7 +270,8 @@ export default function Game() {
           } else if (isDivisor(occupant.value, tile.value)) {
             // Merge: occupant divides into tile
             const newValue = tile.value / occupant.value;
-            // Use the larger number as score (changed from product)
+            // Score calculation: Use the larger number instead of the product
+            // This prevents score inflation and makes gameplay more balanced
             const mergedScore = Math.max(tile.value, occupant.value);
             
             occupiedPositions.delete(posKey);
@@ -328,7 +344,7 @@ export default function Game() {
     scoreGained += chainResult.scoreGained;
     
     // Clear animation flags after a short delay
-    setTimeout(() => {
+    animationTimeoutRef.current = window.setTimeout(() => {
       setGameState(prevState => ({
         ...prevState,
         tiles: prevState.tiles.map(t => ({
@@ -405,8 +421,8 @@ export default function Game() {
       const col = Math.floor(relX / cellWidth);
       const row = Math.floor(relY / cellHeight);
       
-      // Find tile at this position
-      return gameState.tiles.find(t => t.row === row && t.col === col);
+      // Find tile at this position using the ref to avoid dependency
+      return tilesRef.current.find(t => t.row === row && t.col === col);
     };
     
     const handleTouchStart = (e: Event) => {
@@ -473,7 +489,7 @@ export default function Game() {
         board.removeEventListener('touchend', handleTouchEnd);
       };
     }
-  }, [moveTiles, params.n, gameState.tiles]);
+  }, [moveTiles, params.n]);
 
   const handleReset = () => {
     setParams(tempParams);
