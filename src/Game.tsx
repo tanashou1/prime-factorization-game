@@ -367,15 +367,14 @@ export default function Game() {
     const newMoveCount = moveCount + 1;
     
     // Add new tile if needed
+    let finalTiles = allTiles;
     if (newMoveCount % params.k === 0 || hasDisappearing) {
-      allTiles = addNewTile(allTiles.filter(t => t.value !== 0));
-    } else {
-      allTiles = allTiles.filter(t => t.value !== 0);
+      finalTiles = addNewTile(allTiles.filter(t => t.value !== 0));
     }
     
     // Set state with all tiles including those that will disappear
     setGameState({
-      tiles: movedTiles.length > 0 ? [...disappearingTiles, ...chainResult.tiles] : allTiles,
+      tiles: finalTiles,
       score: score + scoreGained,
       moveCount: newMoveCount,
     });
