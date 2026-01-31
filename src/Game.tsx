@@ -17,6 +17,8 @@ export default function Game() {
   const [tempParams, setTempParams] = useState<GameParams>(DEFAULT_PARAMS);
   const [nextTileId, setNextTileId] = useState(0);
   const boardRef = useRef<HTMLDivElement>(null);
+  const animationTimeoutRef = useRef<number | null>(null);
+  const tilesRef = useRef<Tile[]>([]);
 
   // Initialize game state based on params
   const [gameState, setGameState] = useState<GameState>(() => {
@@ -37,6 +39,11 @@ export default function Game() {
     
     return { tiles, score: 0, moveCount: 0 };
   });
+
+  // Update tilesRef whenever gameState changes
+  useEffect(() => {
+    tilesRef.current = gameState.tiles;
+  }, [gameState.tiles]);
 
   // Initialize game
   const initGame = useCallback(() => {
@@ -80,10 +87,11 @@ export default function Game() {
   }, [nextTileId, params.n, params.p]);
 
   // Process chain reactions
-  const processChainReactions = useCallback((tiles: Tile[]): { tiles: Tile[], scoreGained: number } => {
+  const processChainReactions = useCallback((tiles: Tile[], chainMultiplier: number = 1): { tiles: Tile[], scoreGained: number, chainCount: number } => {
     let currentTiles = [...tiles];
     let totalScoreGained = 0;
     let hasChanges = true;
+    let chainCount = 0;
     
     while (hasChanges) {
       hasChanges = false;
@@ -125,15 +133,22 @@ export default function Game() {
               
               if (isDivisor(smaller.value, larger.value)) {
                 const newValue = larger.value / smaller.value;
-                const mergedScore = (larger.scoreValue || larger.value) * (smaller.scoreValue || smaller.value);
+                // Score calculation: Use the larger number instead of the product
+                // This prevents score inflation and makes gameplay more balanced
+                // (e.g., 2 merging with 2 gives score of 2, not 4)
+                const mergedScore = Math.max(larger.value, smaller.value);
+                const currentMultiplier = chainMultiplier * Math.pow(2, chainCount);
+                
+                chainCount++;
                 
                 if (newValue === 1) {
-                  totalScoreGained += mergedScore;
+                  totalScoreGained += mergedScore * currentMultiplier;
                 } else {
                   newTiles.push({
                     ...larger,
                     value: newValue,
                     scoreValue: mergedScore,
+                    isChaining: true, // Mark as part of chain for animation
                   });
                 }
                 
@@ -157,17 +172,27 @@ export default function Game() {
       currentTiles = newTiles;
     }
     
-    return { tiles: currentTiles, scoreGained: totalScoreGained };
+    return { tiles: currentTiles, scoreGained: totalScoreGained, chainCount };
   }, []);
 
   // Move tiles in a direction
-  const moveTiles = useCallback((direction: Direction) => {
+  const moveTiles = useCallback((direction: Direction, tileId?: number) => {
     const { tiles: currentTiles, score, moveCount } = gameState;
     const newTiles = [...currentTiles];
     let moved = false;
     
+    // Clear any pending animation timeouts
+    if (animationTimeoutRef.current) {
+      clearTimeout(animationTimeoutRef.current);
+    }
+    
+    // If tileId is specified, only move that tile
+    const tilesToMove = tileId !== undefined 
+      ? newTiles.filter(t => t.id === tileId)
+      : newTiles;
+    
     // Sort tiles based on direction
-    const sorted = [...newTiles].sort((a, b) => {
+    const sorted = [...tilesToMove].sort((a, b) => {
       switch (direction) {
         case 'up': return a.row - b.row;
         case 'down': return b.row - a.row;
@@ -178,6 +203,13 @@ export default function Game() {
     
     const movedTiles: Tile[] = [];
     const occupiedPositions = new Map<string, Tile>();
+    
+    // Mark non-moving tiles as occupied
+    if (tileId !== undefined) {
+      newTiles.filter(t => t.id !== tileId).forEach(t => {
+        occupiedPositions.set(`${t.row},${t.col}`, t);
+      });
+    }
     
     for (const tile of sorted) {
       let newRow = tile.row;
@@ -205,7 +237,9 @@ export default function Game() {
           if (isDivisor(tile.value, occupant.value)) {
             // Merge: tile divides into occupant
             const newValue = occupant.value / tile.value;
-            const mergedScore = (tile.scoreValue || tile.value) * (occupant.scoreValue || occupant.value);
+            // Score calculation: Use the larger number instead of the product
+            // This prevents score inflation and makes gameplay more balanced
+            const mergedScore = Math.max(tile.value, occupant.value);
             
             occupiedPositions.delete(posKey);
             
@@ -217,6 +251,7 @@ export default function Game() {
                 scoreValue: mergedScore,
                 row: nextRow,
                 col: nextCol,
+                isDividing: true, // Mark for division effect
               });
             } else {
               const mergedTile = {
@@ -225,6 +260,7 @@ export default function Game() {
                 scoreValue: mergedScore,
                 row: nextRow,
                 col: nextCol,
+                isDividing: true, // Mark for division effect
               };
               movedTiles.push(mergedTile);
               occupiedPositions.set(posKey, mergedTile);
@@ -234,7 +270,9 @@ export default function Game() {
           } else if (isDivisor(occupant.value, tile.value)) {
             // Merge: occupant divides into tile
             const newValue = tile.value / occupant.value;
-            const mergedScore = (tile.scoreValue || tile.value) * (occupant.scoreValue || occupant.value);
+            // Score calculation: Use the larger number instead of the product
+            // This prevents score inflation and makes gameplay more balanced
+            const mergedScore = Math.max(tile.value, occupant.value);
             
             occupiedPositions.delete(posKey);
             
@@ -246,6 +284,7 @@ export default function Game() {
                 scoreValue: mergedScore,
                 row: newRow,
                 col: newCol,
+                isDividing: true, // Mark for division effect
               });
             } else {
               const mergedTile = {
@@ -254,6 +293,7 @@ export default function Game() {
                 scoreValue: mergedScore,
                 row: newRow,
                 col: newCol,
+                isDividing: true, // Mark for division effect
               };
               movedTiles.push(mergedTile);
               occupiedPositions.set(`${newRow},${newCol}`, mergedTile);
@@ -278,10 +318,16 @@ export default function Game() {
       
       const posKey = `${newRow},${newCol}`;
       if (!occupiedPositions.has(posKey)) {
-        const finalTile = { ...tile, row: newRow, col: newCol };
+        const finalTile = { ...tile, row: newRow, col: newCol, isMoving: true };
         movedTiles.push(finalTile);
         occupiedPositions.set(posKey, finalTile);
       }
+    }
+    
+    // Include non-moving tiles if we were only moving one tile
+    if (tileId !== undefined) {
+      const movedTileIds = new Set(movedTiles.map(t => t.id));
+      movedTiles.push(...newTiles.filter(t => t.id !== tileId && !movedTileIds.has(t.id)));
     }
     
     if (!moved) return;
@@ -292,10 +338,23 @@ export default function Game() {
       .filter(t => t.value === 0)
       .reduce((sum, t) => sum + (t.scoreValue || 0), 0);
     
-    // Process chain reactions
-    const chainResult = processChainReactions(filteredTiles);
+    // Process chain reactions with chain multiplier
+    const chainResult = processChainReactions(filteredTiles, 1);
     filteredTiles = chainResult.tiles;
     scoreGained += chainResult.scoreGained;
+    
+    // Clear animation flags after a short delay
+    animationTimeoutRef.current = window.setTimeout(() => {
+      setGameState(prevState => ({
+        ...prevState,
+        tiles: prevState.tiles.map(t => ({
+          ...t,
+          isMoving: false,
+          isDividing: false,
+          isChaining: false,
+        })),
+      }));
+    }, 300);
     
     const newMoveCount = moveCount + 1;
     
@@ -344,13 +403,36 @@ export default function Game() {
     let touchStartY = 0;
     let touchEndX = 0;
     let touchEndY = 0;
+    let touchedTileId: number | undefined = undefined;
     
     const minSwipeDistance = 50; // Minimum distance for a swipe to be detected
+    
+    const getTileAtPosition = (x: number, y: number): Tile | undefined => {
+      const board = boardRef.current;
+      if (!board) return undefined;
+      
+      const rect = board.getBoundingClientRect();
+      const relX = x - rect.left;
+      const relY = y - rect.top;
+      
+      // Calculate which grid cell was touched
+      const cellWidth = rect.width / params.n;
+      const cellHeight = rect.height / params.n;
+      const col = Math.floor(relX / cellWidth);
+      const row = Math.floor(relY / cellHeight);
+      
+      // Find tile at this position using the ref to avoid dependency
+      return tilesRef.current.find(t => t.row === row && t.col === col);
+    };
     
     const handleTouchStart = (e: Event) => {
       const touchEvent = e as TouchEvent;
       touchStartX = touchEvent.touches[0].clientX;
       touchStartY = touchEvent.touches[0].clientY;
+      
+      // Determine which tile was touched
+      const touchedTile = getTileAtPosition(touchStartX, touchStartY);
+      touchedTileId = touchedTile?.id;
     };
     
     const handleTouchMove = (e: Event) => {
@@ -379,16 +461,16 @@ export default function Game() {
       if (absX > absY) {
         // Horizontal swipe
         if (deltaX > 0) {
-          moveTiles('right');
+          moveTiles('right', touchedTileId);
         } else {
-          moveTiles('left');
+          moveTiles('left', touchedTileId);
         }
       } else {
         // Vertical swipe
         if (deltaY > 0) {
-          moveTiles('down');
+          moveTiles('down', touchedTileId);
         } else {
-          moveTiles('up');
+          moveTiles('up', touchedTileId);
         }
       }
     };
@@ -407,7 +489,7 @@ export default function Game() {
         board.removeEventListener('touchend', handleTouchEnd);
       };
     }
-  }, [moveTiles]);
+  }, [moveTiles, params.n]);
 
   const handleReset = () => {
     setParams(tempParams);
@@ -430,7 +512,7 @@ export default function Game() {
         {gameState.tiles.map(tile => (
           <div
             key={tile.id}
-            className="tile"
+            className={`tile ${tile.isMoving ? 'tile-moving' : ''} ${tile.isDividing ? 'tile-dividing' : ''} ${tile.isChaining ? 'tile-chaining' : ''}`}
             style={{
               gridColumn: tile.col + 1,
               gridRow: tile.row + 1,

@@ -57,8 +57,20 @@ h1 {
   min-width: 80px;
   min-height: 80px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  transition: all 0.15s ease-in-out;
+  transition: all 0.3s ease-in-out;
   animation: appear 0.2s ease-in-out;
+}
+
+.tile-moving {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tile-dividing {
+  animation: divide 0.4s ease-in-out;
+}
+
+.tile-chaining {
+  animation: chain 0.5s ease-in-out;
 }
 
 @keyframes appear {
@@ -67,6 +79,62 @@ h1 {
   }
   to {
     transform: scale(1);
+  }
+}
+
+@keyframes divide {
+  0% {
+    transform: scale(1);
+    background-color: #edc22e;
+  }
+  25% {
+    transform: scale(1.2);
+    background-color: #ff9800;
+  }
+  50% {
+    transform: scale(1.1) rotate(5deg);
+    background-color: #ff5722;
+  }
+  75% {
+    transform: scale(1.1) rotate(-5deg);
+    background-color: #ff5722;
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    background-color: #edc22e;
+  }
+}
+
+@keyframes chain {
+  0% {
+    transform: scale(1);
+    background-color: #edc22e;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+  20% {
+    transform: scale(1.15);
+    background-color: #9c27b0;
+    box-shadow: 0 0 20px rgba(156, 39, 176, 0.6);
+  }
+  40% {
+    transform: scale(1.1) rotate(10deg);
+    background-color: #e91e63;
+    box-shadow: 0 0 25px rgba(233, 30, 99, 0.8);
+  }
+  60% {
+    transform: scale(1.1) rotate(-10deg);
+    background-color: #e91e63;
+    box-shadow: 0 0 25px rgba(233, 30, 99, 0.8);
+  }
+  80% {
+    transform: scale(1.05);
+    background-color: #9c27b0;
+    box-shadow: 0 0 20px rgba(156, 39, 176, 0.6);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    background-color: #edc22e;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   }
 }
 
