@@ -15,7 +15,7 @@ const DEFAULT_PARAMS: GameParams = {
 export default function Game() {
   const [params, setParams] = useState<GameParams>(DEFAULT_PARAMS);
   const [tempParams, setTempParams] = useState<GameParams>(DEFAULT_PARAMS);
-  const [nextTileId, setNextTileId] = useState(0);
+  const [nextTileId, setNextTileId] = useState(DEFAULT_PARAMS.m); // Start with m tiles already created
   const boardRef = useRef<HTMLDivElement>(null);
   const animationTimeoutRef = useRef<number | null>(null);
   const tilesRef = useRef<Tile[]>([]);
