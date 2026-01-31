@@ -96,3 +96,67 @@ export function checkPerfectPowerElimination(value1: number, value2: number): 's
   
   return null;
 }
+
+// Check if a tile can be factored by multiple adjacent tiles (Issue #5)
+// Returns the tiles that can divide the center tile and their division result
+export function checkMultiTileFactorization(
+  centerTile: { value: number; row: number; col: number },
+  adjacentTiles: Array<{ value: number; row: number; col: number; id: number }>
+): { canFactor: boolean; factorTiles: Array<{ id: number; value: number; newValue: number }> } | null {
+  // We need at least 2 adjacent tiles for multi-tile factorization
+  if (adjacentTiles.length < 2) return null;
+  
+  // Try all combinations of adjacent tiles to see if their product divides the center tile
+  // We'll try combinations of size 2 or more
+  for (let size = 2; size <= adjacentTiles.length; size++) {
+    // Generate all combinations of 'size' tiles
+    const combinations = getCombinations(adjacentTiles, size);
+    
+    for (const combination of combinations) {
+      // Calculate the product of values in this combination
+      const product = combination.reduce((acc, tile) => acc * tile.value, 1);
+      
+      // Check if this product exactly divides the center tile
+      if (centerTile.value % product === 0) {
+        // Calculate the GCD of each tile in the combination
+        // Each tile should be divided by itself (which makes it 1)
+        const factorTiles = combination.map(tile => ({
+          id: tile.id,
+          value: tile.value,
+          newValue: 1, // Each factor tile becomes 1 (then disappears)
+        }));
+        
+        return {
+          canFactor: true,
+          factorTiles,
+        };
+      }
+    }
+  }
+  
+  return null;
+}
+
+// Helper function to generate all combinations of a given size
+function getCombinations<T>(array: T[], size: number): T[][] {
+  if (size === 1) return array.map(item => [item]);
+  if (size === array.length) return [array];
+  
+  const combinations: T[][] = [];
+  
+  function combine(start: number, current: T[]) {
+    if (current.length === size) {
+      combinations.push([...current]);
+      return;
+    }
+    
+    for (let i = start; i < array.length; i++) {
+      current.push(array[i]);
+      combine(i + 1, current);
+      current.pop();
+    }
+  }
+  
+  combine(0, []);
+  return combinations;
+}

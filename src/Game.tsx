@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import './Game.css';
 import type { Tile, GameState, GameParams } from './types';
-import { generateRandomTileValue, isDivisor, getEmptyPositions, checkPerfectPowerElimination } from './gameLogic';
+import { generateRandomTileValue, isDivisor, getEmptyPositions, checkPerfectPowerElimination, checkMultiTileFactorization } from './gameLogic';
 import packageJson from '../package.json';
 
 type Direction = 'up' | 'down' | 'left' | 'right';
@@ -110,7 +110,8 @@ export default function Game() {
         const tile = currentTiles[i];
         let merged = false;
         
-        // Check adjacent tiles
+        // First, check for multi-tile factorization (Issue #5)
+        // Get all adjacent tiles for this tile
         const adjacentDirections = [
           { dr: -1, dc: 0 },
           { dr: 1, dc: 0 },
@@ -118,6 +119,100 @@ export default function Game() {
           { dr: 0, dc: 1 },
         ];
         
+        const adjacentTiles: Array<{ value: number; row: number; col: number; id: number; index: number }> = [];
+        for (const { dr, dc } of adjacentDirections) {
+          const adjRow = tile.row + dr;
+          const adjCol = tile.col + dc;
+          
+          for (let j = 0; j < currentTiles.length; j++) {
+            if (i === j || processed.has(j)) continue;
+            
+            const otherTile = currentTiles[j];
+            if (otherTile.row === adjRow && otherTile.col === adjCol) {
+              adjacentTiles.push({
+                value: otherTile.value,
+                row: otherTile.row,
+                col: otherTile.col,
+                id: otherTile.id,
+                index: j,
+              });
+            }
+          }
+        }
+        
+        // Check for multi-tile factorization if we have multiple adjacent tiles
+        if (adjacentTiles.length >= 2) {
+          const factorResult = checkMultiTileFactorization(
+            { value: tile.value, row: tile.row, col: tile.col },
+            adjacentTiles
+          );
+          
+          if (factorResult !== null) {
+            // Multi-tile factorization found!
+            const product = factorResult.factorTiles.reduce((acc, ft) => acc * ft.value, 1);
+            const centerNewValue = tile.value / product;
+            const mergedScore = tile.value; // Use original tile value for scoring
+            const currentMultiplier = chainMultiplier * Math.pow(2, chainCount);
+            
+            chainCount++;
+            
+            // Update the center tile
+            if (centerNewValue === 1) {
+              totalScoreGained += mergedScore * currentMultiplier;
+              newTiles.push({
+                ...tile,
+                id: currentTileId++,
+                value: 0,
+                scoreValue: mergedScore,
+                isDisappearing: true,
+                isChaining: true,
+                isDividing: true,
+                mergeHighlight: true,
+              });
+            } else {
+              newTiles.push({
+                ...tile,
+                id: currentTileId++,
+                value: centerNewValue,
+                scoreValue: mergedScore,
+                isChaining: true,
+                isDividing: true,
+                mergeHighlight: true,
+              });
+            }
+            
+            // Mark center tile as processed
+            processed.add(i);
+            
+            // Update each factor tile (they all become 1 and disappear)
+            for (const factorTile of factorResult.factorTiles) {
+              const factorIndex = adjacentTiles.find(at => at.id === factorTile.id)?.index;
+              if (factorIndex !== undefined) {
+                processed.add(factorIndex);
+                totalScoreGained += factorTile.value * currentMultiplier;
+                newTiles.push({
+                  ...currentTiles[factorIndex],
+                  id: currentTileId++,
+                  value: 0,
+                  scoreValue: factorTile.value,
+                  isDisappearing: true,
+                  isChaining: true,
+                  isDividing: true,
+                  mergeHighlight: true,
+                });
+              }
+            }
+            
+            merged = true;
+            hasChanges = true;
+          }
+        }
+        
+        if (merged) {
+          continue; // Skip regular merge checks if multi-tile factorization occurred
+        }
+        
+        // Check adjacent tiles for regular merges (reuse adjacentDirections from above)
         for (const { dr, dc } of adjacentDirections) {
           const adjRow = tile.row + dr;
           const adjCol = tile.col + dc;
