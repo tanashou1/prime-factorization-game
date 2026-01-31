@@ -148,6 +148,7 @@ export default function Game() {
                   isChaining: true,
                   isPowerEliminating: true,
                   powerType: powerType,
+                  mergeHighlight: true, // Highlight merge (Issue #22)
                 });
                 newTiles.push({
                   ...otherTile,
@@ -158,6 +159,7 @@ export default function Game() {
                   isChaining: true,
                   isPowerEliminating: true,
                   powerType: powerType,
+                  mergeHighlight: true, // Highlight merge (Issue #22)
                 });
                 
                 processed.add(i);
@@ -199,6 +201,7 @@ export default function Game() {
                     isDisappearing: true,
                     isChaining: true,
                     isDividing: true, // Add division animation flag
+                    mergeHighlight: true, // Highlight merge (Issue #22)
                   });
                 } else {
                   // Assign NEW unique ID to prevent duplicate key errors
@@ -209,6 +212,7 @@ export default function Game() {
                     scoreValue: mergedScore,
                     isChaining: true, // Mark as part of chain for animation
                     isDividing: true, // Add division animation flag
+                    mergeHighlight: true, // Highlight merge (Issue #22)
                   });
                 }
                 
@@ -344,6 +348,7 @@ export default function Game() {
               isDisappearing: true,
               isPowerEliminating: true,
               powerType: powerType,
+              mergeHighlight: true, // Highlight merge (Issue #22)
             });
             movedTiles.push({
               ...occupant,
@@ -355,6 +360,7 @@ export default function Game() {
               isDisappearing: true,
               isPowerEliminating: true,
               powerType: powerType,
+              mergeHighlight: true, // Highlight merge (Issue #22)
             });
             
             moved = true;
@@ -389,6 +395,7 @@ export default function Game() {
                 col: nextCol,
                 isDividing: true, // Mark for division effect
                 isDisappearing: true, // Mark for disappear animation
+                mergeHighlight: true, // Highlight merge (Issue #22)
               });
             } else {
               const mergedTile = {
@@ -399,6 +406,7 @@ export default function Game() {
                 row: nextRow,
                 col: nextCol,
                 isDividing: true, // Mark for division effect
+                mergeHighlight: true, // Highlight merge (Issue #22)
               };
               movedTiles.push(mergedTile);
               occupiedPositions.set(posKey, mergedTile);
@@ -438,6 +446,7 @@ export default function Game() {
                 col: nextCol,
                 isDividing: true, // Mark for division effect
                 isDisappearing: true, // Mark for disappear animation
+                mergeHighlight: true, // Highlight merge (Issue #22)
               });
             } else {
               const mergedTile = {
@@ -448,6 +457,7 @@ export default function Game() {
                 row: nextRow,
                 col: nextCol,
                 isDividing: true, // Mark for division effect
+                mergeHighlight: true, // Highlight merge (Issue #22)
               };
               movedTiles.push(mergedTile);
               occupiedPositions.set(posKey, mergedTile);
@@ -619,6 +629,7 @@ export default function Game() {
             isNew: false,
             isPowerEliminating: false,
             powerType: undefined,
+            mergeHighlight: false, // Clear merge highlight (Issue #22)
           }));
         
         return {
@@ -804,7 +815,7 @@ export default function Game() {
         {gameState.tiles.map(tile => (
           <div
             key={tile.id}
-            className={`tile ${tile.isNew ? 'tile-new' : ''} ${tile.isMoving ? 'tile-moving' : ''} ${tile.isDividing ? 'tile-dividing' : ''} ${tile.isChaining ? 'tile-chaining' : ''} ${tile.isDisappearing ? 'tile-disappearing' : ''} ${tile.isPowerEliminating ? 'tile-power-eliminating' : ''} ${tile.powerType === 'square' ? 'tile-power-square' : ''} ${tile.powerType === 'cube' ? 'tile-power-cube' : ''}`}
+            className={`tile ${tile.isNew ? 'tile-new' : ''} ${tile.isMoving ? 'tile-moving' : ''} ${tile.isDividing ? 'tile-dividing' : ''} ${tile.isChaining ? 'tile-chaining' : ''} ${tile.isDisappearing ? 'tile-disappearing' : ''} ${tile.isPowerEliminating ? 'tile-power-eliminating' : ''} ${tile.powerType === 'square' ? 'tile-power-square' : ''} ${tile.powerType === 'cube' ? 'tile-power-cube' : ''} ${tile.mergeHighlight ? 'tile-merge-highlight' : ''}`}
             style={{
               gridColumn: tile.col + 1,
               gridRow: tile.row + 1,
