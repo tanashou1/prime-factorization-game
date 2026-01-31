@@ -449,13 +449,10 @@ export default function Game() {
     for (let i = 0; i < chainResult.chainSteps.length; i++) {
       const stepTiles = chainResult.chainSteps[i];
       
-      // Include disappearing tiles for visual feedback during chains
-      const tilesToShow = [...disappearingTiles, ...stepTiles];
-      
-      // Update state with this chain step
+      // Update state with this chain step, including disappearing tiles for visual feedback
       setGameState(prevState => ({
         ...prevState,
-        tiles: tilesToShow,
+        tiles: [...disappearingTiles, ...stepTiles],
         score: score + scoreGained,
       }));
       
