@@ -18,6 +18,7 @@ export interface GameState {
   score: number;
   moveCount: number;
   chainCount?: number; // Display chain count during combo
+  chainPosition?: { row: number; col: number }; // Position to show chain counter
 }
 
 export interface GameParams {
