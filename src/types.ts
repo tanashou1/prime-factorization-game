@@ -11,6 +11,7 @@ export interface Tile {
   isDisappearing?: boolean; // Track if tile is disappearing (value became 0)
   isPowerEliminating?: boolean; // Track if tile is disappearing due to perfect power (square/cube)
   powerType?: 'square' | 'cube'; // Type of perfect power elimination
+  mergeHighlight?: boolean; // Track if tile is involved in a merge operation (Issue #22)
 }
 
 export interface GameState {

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import './Game.css';
 import type { Tile, GameState, GameParams } from './types';
-import { generateRandomTileValue, isDivisor, getEmptyPositions, checkPerfectPowerElimination } from './gameLogic';
+import { generateRandomTileValue, isDivisor, getEmptyPositions, checkPerfectPowerElimination, checkMultiTileFactorization } from './gameLogic';
 import packageJson from '../package.json';
 
 type Direction = 'up' | 'down' | 'left' | 'right';
@@ -110,7 +110,8 @@ export default function Game() {
         const tile = currentTiles[i];
         let merged = false;
         
-        // Check adjacent tiles
+        // First, check for multi-tile factorization (Issue #5)
+        // Get all adjacent tiles for this tile
         const adjacentDirections = [
           { dr: -1, dc: 0 },
           { dr: 1, dc: 0 },
@@ -118,6 +119,104 @@ export default function Game() {
           { dr: 0, dc: 1 },
         ];
         
+        const adjacentTiles: Array<{ value: number; row: number; col: number; id: number; index: number }> = [];
+        for (const { dr, dc } of adjacentDirections) {
+          const adjRow = tile.row + dr;
+          const adjCol = tile.col + dc;
+          
+          for (let j = 0; j < currentTiles.length; j++) {
+            if (i === j || processed.has(j)) continue;
+            
+            const otherTile = currentTiles[j];
+            if (otherTile.row === adjRow && otherTile.col === adjCol) {
+              adjacentTiles.push({
+                value: otherTile.value,
+                row: otherTile.row,
+                col: otherTile.col,
+                id: otherTile.id,
+                index: j,
+              });
+            }
+          }
+        }
+        
+        // Check for multi-tile factorization if we have multiple adjacent tiles
+        let multiTileFactored = false;
+        if (adjacentTiles.length >= 2) {
+          const factorResult = checkMultiTileFactorization(
+            { value: tile.value, row: tile.row, col: tile.col },
+            adjacentTiles
+          );
+          
+          if (factorResult !== null) {
+            // Multi-tile factorization found!
+            const product = factorResult.factorTiles.reduce((acc, ft) => acc * ft.value, 1);
+            const centerNewValue = tile.value / product;
+            const mergedScore = tile.value; // Use original tile value for scoring
+            const currentMultiplier = chainMultiplier * Math.pow(2, chainCount);
+            
+            chainCount++;
+            
+            // Update the center tile
+            if (centerNewValue === 1) {
+              totalScoreGained += mergedScore * currentMultiplier;
+              newTiles.push({
+                ...tile,
+                id: currentTileId++,
+                value: 0,
+                scoreValue: mergedScore,
+                isDisappearing: true,
+                isChaining: true,
+                isDividing: true,
+                mergeHighlight: true,
+              });
+            } else {
+              newTiles.push({
+                ...tile,
+                id: currentTileId++,
+                value: centerNewValue,
+                scoreValue: mergedScore,
+                isChaining: true,
+                isDividing: true,
+                mergeHighlight: true,
+              });
+            }
+            
+            // Mark center tile as processed
+            processed.add(i);
+            
+            // Build a map from id to index for efficient lookup
+            const idToIndexMap = new Map(adjacentTiles.map(at => [at.id, at.index]));
+            
+            // Update each factor tile (they all become 1 and disappear)
+            for (const factorTile of factorResult.factorTiles) {
+              const factorIndex = idToIndexMap.get(factorTile.id);
+              if (factorIndex !== undefined) {
+                processed.add(factorIndex);
+                totalScoreGained += factorTile.value * currentMultiplier;
+                newTiles.push({
+                  ...currentTiles[factorIndex],
+                  id: currentTileId++,
+                  value: 0,
+                  scoreValue: factorTile.value,
+                  isDisappearing: true,
+                  isChaining: true,
+                  isDividing: true,
+                  mergeHighlight: true,
+                });
+              }
+            }
+            
+            multiTileFactored = true;
+            hasChanges = true;
+          }
+        }
+        
+        if (multiTileFactored) {
+          continue; // Skip regular merge checks if multi-tile factorization occurred
+        }
+        
+        // Check adjacent tiles for regular merges (reuse adjacentDirections from above)
         for (const { dr, dc } of adjacentDirections) {
           const adjRow = tile.row + dr;
           const adjCol = tile.col + dc;
@@ -148,6 +247,7 @@ export default function Game() {
                   isChaining: true,
                   isPowerEliminating: true,
                   powerType: powerType,
+                  mergeHighlight: true, // Highlight merge (Issue #22)
                 });
                 newTiles.push({
                   ...otherTile,
@@ -158,6 +258,7 @@ export default function Game() {
                   isChaining: true,
                   isPowerEliminating: true,
                   powerType: powerType,
+                  mergeHighlight: true, // Highlight merge (Issue #22)
                 });
                 
                 processed.add(i);
@@ -199,6 +300,7 @@ export default function Game() {
                     isDisappearing: true,
                     isChaining: true,
                     isDividing: true, // Add division animation flag
+                    mergeHighlight: true, // Highlight merge (Issue #22)
                   });
                 } else {
                   // Assign NEW unique ID to prevent duplicate key errors
@@ -209,6 +311,7 @@ export default function Game() {
                     scoreValue: mergedScore,
                     isChaining: true, // Mark as part of chain for animation
                     isDividing: true, // Add division animation flag
+                    mergeHighlight: true, // Highlight merge (Issue #22)
                   });
                 }
                 
@@ -344,6 +447,7 @@ export default function Game() {
               isDisappearing: true,
               isPowerEliminating: true,
               powerType: powerType,
+              mergeHighlight: true, // Highlight merge (Issue #22)
             });
             movedTiles.push({
               ...occupant,
@@ -355,6 +459,7 @@ export default function Game() {
               isDisappearing: true,
               isPowerEliminating: true,
               powerType: powerType,
+              mergeHighlight: true, // Highlight merge (Issue #22)
             });
             
             moved = true;
@@ -389,6 +494,7 @@ export default function Game() {
                 col: nextCol,
                 isDividing: true, // Mark for division effect
                 isDisappearing: true, // Mark for disappear animation
+                mergeHighlight: true, // Highlight merge (Issue #22)
               });
             } else {
               const mergedTile = {
@@ -399,6 +505,7 @@ export default function Game() {
                 row: nextRow,
                 col: nextCol,
                 isDividing: true, // Mark for division effect
+                mergeHighlight: true, // Highlight merge (Issue #22)
               };
               movedTiles.push(mergedTile);
               occupiedPositions.set(posKey, mergedTile);
@@ -438,6 +545,7 @@ export default function Game() {
                 col: nextCol,
                 isDividing: true, // Mark for division effect
                 isDisappearing: true, // Mark for disappear animation
+                mergeHighlight: true, // Highlight merge (Issue #22)
               });
             } else {
               const mergedTile = {
@@ -448,6 +556,7 @@ export default function Game() {
                 row: nextRow,
                 col: nextCol,
                 isDividing: true, // Mark for division effect
+                mergeHighlight: true, // Highlight merge (Issue #22)
               };
               movedTiles.push(mergedTile);
               occupiedPositions.set(posKey, mergedTile);
@@ -619,6 +728,7 @@ export default function Game() {
             isNew: false,
             isPowerEliminating: false,
             powerType: undefined,
+            mergeHighlight: false, // Clear merge highlight (Issue #22)
           }));
         
         return {
@@ -804,7 +914,7 @@ export default function Game() {
         {gameState.tiles.map(tile => (
           <div
             key={tile.id}
-            className={`tile ${tile.isNew ? 'tile-new' : ''} ${tile.isMoving ? 'tile-moving' : ''} ${tile.isDividing ? 'tile-dividing' : ''} ${tile.isChaining ? 'tile-chaining' : ''} ${tile.isDisappearing ? 'tile-disappearing' : ''} ${tile.isPowerEliminating ? 'tile-power-eliminating' : ''} ${tile.powerType === 'square' ? 'tile-power-square' : ''} ${tile.powerType === 'cube' ? 'tile-power-cube' : ''}`}
+            className={`tile ${tile.isNew ? 'tile-new' : ''} ${tile.isMoving ? 'tile-moving' : ''} ${tile.isDividing ? 'tile-dividing' : ''} ${tile.isChaining ? 'tile-chaining' : ''} ${tile.isDisappearing ? 'tile-disappearing' : ''} ${tile.isPowerEliminating ? 'tile-power-eliminating' : ''} ${tile.powerType === 'square' ? 'tile-power-square' : ''} ${tile.powerType === 'cube' ? 'tile-power-cube' : ''} ${tile.mergeHighlight ? 'tile-merge-highlight' : ''}`}
             style={{
               gridColumn: tile.col + 1,
               gridRow: tile.row + 1,
@@ -825,6 +935,10 @@ export default function Game() {
             {gameState.chainCount}連鎖!
           </div>
         )}
+      </div>
+      
+      <div style={{ display: 'flex', justifyContent: 'center', margin: '20px 0' }}>
+        <button onClick={handleGenerateTile} className="generate-tile-button">タイル生成</button>
       </div>
       
       <div className="controls">
@@ -877,9 +991,8 @@ export default function Game() {
             />
           </label>
         </div>
-        <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '15px' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: '15px' }}>
           <button onClick={handleReset}>リセット</button>
-          <button onClick={handleGenerateTile}>タイル生成</button>
         </div>
       </div>
       

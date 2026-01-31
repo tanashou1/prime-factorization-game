@@ -93,6 +93,13 @@ h1 {
   animation: powerEliminateCube 1.2s ease-in-out forwards;
 }
 
+.tile-merge-highlight {
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.9), 
+              0 0 40px rgba(255, 215, 0, 0.7),
+              0 0 60px rgba(255, 215, 0, 0.5) !important;
+  border: 3px solid #ffd700;
+}
+
 @keyframes appear {
   from {
     transform: scale(0);
@@ -335,6 +342,18 @@ button:hover {
 
 button:active {
   background-color: #7f6a56;
+}
+
+.generate-tile-button {
+  background-color: #3498db;
+}
+
+.generate-tile-button:hover {
+  background-color: #4aa3df;
+}
+
+.generate-tile-button:active {
+  background-color: #2980b9;
 }
 
 .instructions {
