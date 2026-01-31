@@ -1,0 +1,182 @@
+Agent-Driven Development Workflow with Semantic Versioning
+============================================================
+
+┌─────────────────────────────────────────────────────────────────┐
+│                      1. ISSUE RECEIVED                          │
+│  GitHub Issue assigned to Copilot Agent                         │
+└──────────────────────┬──────────────────────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                  2. READ INSTRUCTIONS                           │
+│  Agent reads: INSTRUCTIONS.md, QUICK-REFERENCE.md               │
+│  Purpose: Understand workflow and versioning rules              │
+└──────────────────────┬──────────────────────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────────────────┐
+│              3. ANALYZE CHANGE TYPE                             │
+│                                                                  │
+│  ┌───────────┐  ┌────────────┐  ┌─────────────┐               │
+│  │ Breaking  │  │   New      │  │  Bug Fix    │               │
+│  │  Change?  │  │ Feature?   │  │ / Improve?  │               │
+│  │    ↓      │  │    ↓       │  │     ↓       │               │
+│  │  MAJOR    │  │  MINOR     │  │   PATCH     │               │
+│  │  X.0.0    │  │  0.X.0     │  │   0.0.X     │               │
+│  └───────────┘  └────────────┘  └─────────────┘               │
+│                                                                  │
+│  Current version: 1.0.0                                         │
+│  Determined version: 1.0.1 (example: bug fix)                   │
+└──────────────────────┬──────────────────────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────────────────┐
+│              4. IMPLEMENT CHANGES                               │
+│                                                                  │
+│  • Review development-guide.md for patterns                     │
+│  • Make minimal necessary changes                               │
+│  • Follow existing code style                                   │
+│  • Update package.json version field                            │
+│                                                                  │
+│  File: package.json                                             │
+│  Change: "version": "1.0.0" → "version": "1.0.1"               │
+└──────────────────────┬──────────────────────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                  5. TESTING PHASE                               │
+│                                                                  │
+│  ┌─────────────┐  ┌─────────────┐  ┌──────────────┐           │
+│  │ npm run     │  │ npm run     │  │  Manual      │           │
+│  │ lint        │→│ build       │→│  Testing     │           │
+│  │ ✓ Pass      │  │ ✓ Success   │  │  ✓ Works     │           │
+│  └─────────────┘  └─────────────┘  └──────────────┘           │
+│                                                                  │
+│  For UI changes: Take screenshots                               │
+└──────────────────────┬──────────────────────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────────────────┐
+│              6. CREATE PULL REQUEST                             │
+│                                                                  │
+│  Title: "Fix: Resolve tile animation bug (v1.0.1)"             │
+│                                                                  │
+│  Description includes:                                          │
+│  • Summary of changes                                           │
+│  • Version update (1.0.0 → 1.0.1)                              │
+│  • Reason for PATCH increment                                   │
+│  • Screenshots (if UI changed)                                  │
+│  • Testing results                                              │
+└──────────────────────┬──────────────────────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                  7. CODE REVIEW                                 │
+│  • Human review                                                 │
+│  • CI/CD checks                                                 │
+│  • Version update verified                                      │
+└──────────────────────┬──────────────────────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                8. MERGE TO MAIN                                 │
+│  PR approved and merged                                         │
+└──────────────────────┬──────────────────────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────────────────┐
+│              9. CREATE GIT TAG                                  │
+│                                                                  │
+│  $ git checkout main                                            │
+│  $ git pull origin main                                         │
+│  $ git tag -a v1.0.1 -m "Fix tile animation bug"               │
+│  $ git push origin v1.0.1                                       │
+│                                                                  │
+│  Alternative: Use version-helper.sh                             │
+└──────────────────────┬──────────────────────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────────────────┐
+│             10. AUTOMATIC DEPLOYMENT                            │
+│                                                                  │
+│  GitHub Actions triggered:                                      │
+│  • Build application                                            │
+│  • Deploy to GitHub Pages                                       │
+│  • Version visible in UI                                        │
+│                                                                  │
+│  Live at: https://tanashou1.github.io/prime-factorization-game/│
+└──────────────────────┬──────────────────────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    ✅ COMPLETE                                  │
+│                                                                  │
+│  ✓ Issue resolved                                               │
+│  ✓ Version updated                                              │
+│  ✓ Tag created                                                  │
+│  ✓ Deployed                                                     │
+│  ✓ Ready for next issue                                         │
+└─────────────────────────────────────────────────────────────────┘
+
+
+Supporting Files Reference
+==========================
+
+INSTRUCTIONS.md          → Steps 2, 4, 5, 6 (Main workflow)
+QUICK-REFERENCE.md       → Step 3 (Version decision)
+version-manager.md       → Step 3, 4 (Versioning rules)
+development-guide.md     → Step 4 (Coding patterns)
+version-helper.sh        → Step 9 (Automation)
+INDEX.md                → All steps (Complete reference)
+
+
+Decision Matrix
+===============
+
+Change Type              → Version    Example
+─────────────────────────────────────────────────────
+Remove feature          → MAJOR      Delete tile type
+Change game state       → MAJOR      New save format
+Framework change        → MAJOR      React → Vue
+
+Add game mode           → MINOR      Multiplayer
+Add UI panel            → MINOR      Settings screen
+New mechanic            → MINOR      Power-ups
+
+Fix animation           → PATCH      Smooth transitions
+Fix calculation         → PATCH      Score bug
+Optimize performance    → PATCH      Faster rendering
+Layout fix              → PATCH      Mobile responsive
+
+
+Version History
+===============
+
+Tag      Version  Description
+─────────────────────────────────────────
+v1.0.0   Initial  First release with versioning
+v1.0.1   PATCH    Fix tile animation bug
+v1.1.0   MINOR    Add multi-tile factorization
+v1.1.1   PATCH    Fix merge highlighting
+v2.0.0   MAJOR    Game redesign (if needed)
+
+
+Quick Commands
+==============
+
+# Check current version
+cat package.json | grep version
+
+# List all tags
+git tag -l
+
+# Show tag details
+git show v1.0.1
+
+# Use helper script
+.github/agents/version-helper.sh patch "Description"
+
+# Manual version bump
+npm version patch   # 1.0.0 → 1.0.1
+npm version minor   # 1.0.0 → 1.1.0
+npm version major   # 1.0.0 → 2.0.0
