@@ -827,6 +827,10 @@ export default function Game() {
         )}
       </div>
       
+      <div style={{ display: 'flex', justifyContent: 'center', margin: '20px 0' }}>
+        <button onClick={handleGenerateTile} className="generate-tile-button">タイル生成</button>
+      </div>
+      
       <div className="controls">
         <h2>パラメータ設定</h2>
         <div className="param">
@@ -877,9 +881,8 @@ export default function Game() {
             />
           </label>
         </div>
-        <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '15px' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: '15px' }}>
           <button onClick={handleReset}>リセット</button>
-          <button onClick={handleGenerateTile}>タイル生成</button>
         </div>
       </div>
       
