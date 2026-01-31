@@ -337,6 +337,75 @@ export default function Game() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [moveTiles]);
 
+  // Handle touch input for swipe gestures
+  useEffect(() => {
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchEndX = 0;
+    let touchEndY = 0;
+    
+    const minSwipeDistance = 50; // Minimum distance for a swipe to be detected
+    
+    const handleTouchStart = (e: Event) => {
+      const touchEvent = e as TouchEvent;
+      touchStartX = touchEvent.touches[0].clientX;
+      touchStartY = touchEvent.touches[0].clientY;
+    };
+    
+    const handleTouchMove = (e: Event) => {
+      // Prevent default behavior to avoid page scrolling/refreshing
+      e.preventDefault();
+    };
+    
+    const handleTouchEnd = (e: Event) => {
+      const touchEvent = e as TouchEvent;
+      touchEndX = touchEvent.changedTouches[0].clientX;
+      touchEndY = touchEvent.changedTouches[0].clientY;
+      
+      const deltaX = touchEndX - touchStartX;
+      const deltaY = touchEndY - touchStartY;
+      
+      // Determine if this is a horizontal or vertical swipe
+      const absX = Math.abs(deltaX);
+      const absY = Math.abs(deltaY);
+      
+      // Check if the swipe distance is sufficient
+      if (Math.max(absX, absY) < minSwipeDistance) {
+        return;
+      }
+      
+      // Determine swipe direction based on the larger movement
+      if (absX > absY) {
+        // Horizontal swipe
+        if (deltaX > 0) {
+          moveTiles('right');
+        } else {
+          moveTiles('left');
+        }
+      } else {
+        // Vertical swipe
+        if (deltaY > 0) {
+          moveTiles('down');
+        } else {
+          moveTiles('up');
+        }
+      }
+    };
+    
+    const board = document.querySelector('.board');
+    if (board) {
+      board.addEventListener('touchstart', handleTouchStart, { passive: true });
+      board.addEventListener('touchmove', handleTouchMove, { passive: false });
+      board.addEventListener('touchend', handleTouchEnd, { passive: true });
+      
+      return () => {
+        board.removeEventListener('touchstart', handleTouchStart);
+        board.removeEventListener('touchmove', handleTouchMove);
+        board.removeEventListener('touchend', handleTouchEnd);
+      };
+    }
+  }, [moveTiles]);
+
   const handleReset = () => {
     setParams(tempParams);
     setTimeout(() => initGame(), 0);
@@ -424,7 +493,7 @@ export default function Game() {
       
       <div className="instructions">
         <h3>遊び方</h3>
-        <p>矢印キーでタイルを動かします。</p>
+        <p>矢印キーまたはスワイプでタイルを動かします。</p>
         <p>片方が片方の約数であれば合体して、割った数になります。</p>
         <p>タイルが1になると消えてスコアになります。</p>
       </div>
