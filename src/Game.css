@@ -80,6 +80,14 @@ h1 {
   animation: disappear 0.8s ease-in-out forwards;
 }
 
+.tile-power-eliminating.tile-power-square {
+  animation: powerEliminate 1s ease-in-out forwards;
+}
+
+.tile-power-eliminating.tile-power-cube {
+  animation: powerEliminateCube 1.2s ease-in-out forwards;
+}
+
 @keyframes appear {
   from {
     transform: scale(0);
@@ -170,6 +178,102 @@ h1 {
   }
 }
 
+@keyframes powerEliminate {
+  0% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+    background-color: #edc22e;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+  15% {
+    transform: scale(1.3) rotate(180deg);
+    opacity: 1;
+    background-color: #ff9800;
+    box-shadow: 0 0 30px rgba(255, 152, 0, 0.9);
+  }
+  30% {
+    transform: scale(1.5) rotate(360deg);
+    opacity: 1;
+    background-color: #f44336;
+    box-shadow: 0 0 50px rgba(244, 67, 54, 1);
+  }
+  50% {
+    transform: scale(1.7) rotate(540deg);
+    opacity: 0.9;
+    background-color: #e91e63;
+    box-shadow: 0 0 60px rgba(233, 30, 99, 1), 0 0 80px rgba(233, 30, 99, 0.6);
+  }
+  70% {
+    transform: scale(1.5) rotate(720deg);
+    opacity: 0.6;
+    background-color: #9c27b0;
+    box-shadow: 0 0 70px rgba(156, 39, 176, 0.8);
+  }
+  85% {
+    transform: scale(0.8) rotate(900deg);
+    opacity: 0.3;
+    background-color: #673ab7;
+  }
+  100% {
+    transform: scale(0) rotate(1080deg);
+    opacity: 0;
+  }
+}
+
+@keyframes powerEliminateCube {
+  0% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+    background-color: #edc22e;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+  10% {
+    transform: scale(1.2) rotate(90deg) rotateY(90deg);
+    opacity: 1;
+    background-color: #ffa726;
+    box-shadow: 0 0 30px rgba(255, 167, 38, 0.9);
+  }
+  20% {
+    transform: scale(1.4) rotate(180deg) rotateY(180deg);
+    opacity: 1;
+    background-color: #ff7043;
+    box-shadow: 0 0 50px rgba(255, 112, 67, 1);
+  }
+  35% {
+    transform: scale(1.6) rotate(270deg) rotateY(270deg);
+    opacity: 1;
+    background-color: #ec407a;
+    box-shadow: 0 0 60px rgba(236, 64, 122, 1), 0 0 80px rgba(236, 64, 122, 0.6);
+  }
+  50% {
+    transform: scale(1.8) rotate(360deg) rotateY(360deg);
+    opacity: 0.95;
+    background-color: #ab47bc;
+    box-shadow: 0 0 70px rgba(171, 71, 188, 1), 0 0 100px rgba(171, 71, 188, 0.7);
+  }
+  65% {
+    transform: scale(1.6) rotate(450deg) rotateY(450deg);
+    opacity: 0.7;
+    background-color: #7e57c2;
+    box-shadow: 0 0 80px rgba(126, 87, 194, 0.9);
+  }
+  80% {
+    transform: scale(1.2) rotate(540deg) rotateY(540deg);
+    opacity: 0.4;
+    background-color: #5c6bc0;
+    box-shadow: 0 0 60px rgba(92, 107, 192, 0.6);
+  }
+  90% {
+    transform: scale(0.6) rotate(630deg) rotateY(630deg);
+    opacity: 0.2;
+    background-color: #42a5f5;
+  }
+  100% {
+    transform: scale(0) rotate(720deg) rotateY(720deg);
+    opacity: 0;
+  }
+}
+
 .controls {
   background-color: #f9f9f9;
   padding: 20px;
@@ -248,15 +352,14 @@ button:active {
 }
 
 .chain-counter {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
   font-weight: bold;
   color: #9c27b0;
-  text-shadow: 0 0 20px rgba(156, 39, 176, 0.8),
-               0 0 40px rgba(156, 39, 176, 0.6);
+  text-shadow: 0 0 15px rgba(156, 39, 176, 0.9),
+               0 0 30px rgba(156, 39, 176, 0.7);
   animation: chainCounterPulse 0.8s ease-in-out;
   pointer-events: none;
   z-index: 100;
@@ -264,19 +367,19 @@ button:active {
 
 @keyframes chainCounterPulse {
   0% {
-    transform: translate(-50%, -50%) scale(0);
+    transform: scale(0);
     opacity: 0;
   }
   30% {
-    transform: translate(-50%, -50%) scale(1.5);
+    transform: scale(1.5);
     opacity: 1;
   }
   70% {
-    transform: translate(-50%, -50%) scale(1.2);
+    transform: scale(1.2);
     opacity: 1;
   }
   100% {
-    transform: translate(-50%, -50%) scale(1);
+    transform: scale(1);
     opacity: 0;
   }
 }

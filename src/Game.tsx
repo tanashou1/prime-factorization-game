@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import './Game.css';
 import type { Tile, GameState, GameParams } from './types';
-import { generateRandomTileValue, isDivisor, getEmptyPositions } from './gameLogic';
+import { generateRandomTileValue, isDivisor, getEmptyPositions, checkPerfectPowerElimination } from './gameLogic';
 
 type Direction = 'up' | 'down' | 'left' | 'right';
 
@@ -19,6 +19,7 @@ export default function Game() {
   const boardRef = useRef<HTMLDivElement>(null);
   const animationTimeoutRef = useRef<number | null>(null);
   const tilesRef = useRef<Tile[]>([]);
+  const isAnimatingRef = useRef(false); // Use ref to track animation state without causing re-renders
 
   // Initialize game state based on params
   const [gameState, setGameState] = useState<GameState>(() => {
@@ -123,7 +124,47 @@ export default function Game() {
             
             const otherTile = currentTiles[j];
             if (otherTile.row === adjRow && otherTile.col === adjCol) {
-              // Check if they can merge
+              // First check for perfect power elimination (Issue #16)
+              const powerType = checkPerfectPowerElimination(tile.value, otherTile.value);
+              if (powerType !== null) {
+                // Both tiles disappear with special animation
+                // Score: Sum of both identical tile values
+                const mergedScore = tile.value * 2;
+                const currentMultiplier = chainMultiplier * Math.pow(2, chainCount);
+                totalScoreGained += mergedScore * currentMultiplier;
+                
+                chainCount++;
+                
+                // Mark both tiles as disappearing with power elimination animation
+                newTiles.push({
+                  ...tile,
+                  id: currentTileId++,
+                  value: 0,
+                  scoreValue: tile.value,
+                  isDisappearing: true,
+                  isChaining: true,
+                  isPowerEliminating: true,
+                  powerType: powerType,
+                });
+                newTiles.push({
+                  ...otherTile,
+                  id: currentTileId++,
+                  value: 0,
+                  scoreValue: otherTile.value,
+                  isDisappearing: true,
+                  isChaining: true,
+                  isPowerEliminating: true,
+                  powerType: powerType,
+                });
+                
+                processed.add(i);
+                processed.add(j);
+                merged = true;
+                hasChanges = true;
+                break;
+              }
+              
+              // Check if they can merge normally
               let larger, smaller;
               if (tile.value > otherTile.value) {
                 larger = tile;
@@ -203,6 +244,11 @@ export default function Game() {
 
   // Move tiles in a direction
   const moveTiles = useCallback(async (direction: Direction, tileId?: number) => {
+    // Prevent moves during animations (Issue #17)
+    if (isAnimatingRef.current) return;
+    
+    isAnimatingRef.current = true; // Set animation flag at start
+    
     const { tiles: currentTiles, score, moveCount } = gameState;
     // Filter out any stale tiles (disappearing tiles with value 0, or tiles with animation flags that should be gone)
     const newTiles = [...currentTiles.filter(t => t.value !== 0 && !t.isDisappearing)];
@@ -272,7 +318,47 @@ export default function Game() {
         const occupant = occupiedPositions.get(posKey);
         
         if (occupant) {
-          // Check if they can merge
+          // First check for perfect power elimination (Issue #16)
+          const powerType = checkPerfectPowerElimination(tile.value, occupant.value);
+          if (powerType !== null) {
+            // Both tiles disappear with special animation
+            
+            occupiedPositions.delete(posKey);
+            path.push({row: nextRow, col: nextCol});
+            
+            // Track that these tiles merged (use original IDs)
+            mergedTileIds.add(tile.id);
+            mergedTileIds.add(occupant.id);
+            
+            // Add both disappearing tiles with power elimination animation
+            movedTiles.push({
+              ...tile,
+              id: currentNextTileId++,
+              value: 0,
+              scoreValue: tile.value,
+              row: nextRow,
+              col: nextCol,
+              isDisappearing: true,
+              isPowerEliminating: true,
+              powerType: powerType,
+            });
+            movedTiles.push({
+              ...occupant,
+              id: currentNextTileId++,
+              value: 0,
+              scoreValue: occupant.value,
+              row: nextRow,
+              col: nextCol,
+              isDisappearing: true,
+              isPowerEliminating: true,
+              powerType: powerType,
+            });
+            
+            moved = true;
+            break;
+          }
+          
+          // Check if they can merge normally
           if (isDivisor(tile.value, occupant.value)) {
             // Merge: tile divides into occupant
             const newValue = occupant.value / tile.value;
@@ -407,7 +493,10 @@ export default function Game() {
       movedTiles.push(...newTiles.filter(t => t.id !== tileId && !movedTileIds.has(t.id) && !mergedTileIds.has(t.id)));
     }
     
-    if (!moved) return;
+    if (!moved) {
+      isAnimatingRef.current = false; // Clear animation flag if no move
+      return;
+    }
     
     // Animate tiles through intermediate positions
     const pathLengths = Array.from(tileMovementPaths.values()).map(p => p.length);
@@ -467,6 +556,15 @@ export default function Game() {
     for (let i = 0; i < chainResult.chainSteps.length; i++) {
       const stepTiles = chainResult.chainSteps[i];
       
+      // Calculate average position of chaining tiles for localized display (Issue #17)
+      const chainingTiles = stepTiles.filter(t => t.isChaining);
+      let chainPosition = undefined;
+      if (chainingTiles.length > 0) {
+        const avgRow = chainingTiles.reduce((sum, t) => sum + t.row, 0) / chainingTiles.length;
+        const avgCol = chainingTiles.reduce((sum, t) => sum + t.col, 0) / chainingTiles.length;
+        chainPosition = { row: avgRow, col: avgCol };
+      }
+      
       // Update state with this chain step, including disappearing tiles for visual feedback
       // Also display chain counter if this is a chain (more than 1 chain count)
       setGameState(prevState => ({
@@ -474,6 +572,7 @@ export default function Game() {
         tiles: [...disappearingTiles, ...stepTiles],
         score: score + scoreGained,
         chainCount: chainResult.chainCount > 0 ? chainResult.chainCount : undefined,
+        chainPosition: chainPosition,
       }));
       
       // Wait for chain animation to complete (increased from 500ms to 800ms for better visibility)
@@ -514,6 +613,8 @@ export default function Game() {
             isDividing: false,
             isChaining: false,
             isNew: false,
+            isPowerEliminating: false,
+            powerType: undefined,
           }));
         
         return {
@@ -521,6 +622,9 @@ export default function Game() {
           tiles: clearedTiles,
         };
       });
+      
+      // Clear animation flag after all animations complete
+      isAnimatingRef.current = false;
     }, 100); // Short delay to clear flags
   }, [gameState, params, addNewTile, processChainReactions, nextTileId]);
 
@@ -581,12 +685,27 @@ export default function Game() {
     
     const handleTouchStart = (e: Event) => {
       const touchEvent = e as TouchEvent;
-      touchStartX = touchEvent.touches[0].clientX;
-      touchStartY = touchEvent.touches[0].clientY;
+      const touch = touchEvent.touches[0];
+      touchStartX = touch.clientX;
+      touchStartY = touch.clientY;
       
-      // Determine which tile was touched
-      const touchedTile = getTileAtPosition(touchStartX, touchStartY);
-      touchedTileId = touchedTile?.id;
+      // Check if touch started within board bounds (Issue #17)
+      const board = boardRef.current;
+      if (board) {
+        const rect = board.getBoundingClientRect();
+        const relX = touch.clientX - rect.left;
+        const relY = touch.clientY - rect.top;
+        
+        // Only process if touch starts within board
+        if (relX >= 0 && relX <= rect.width && relY >= 0 && relY <= rect.height) {
+          // Determine which tile was touched
+          const touchedTile = getTileAtPosition(touchStartX, touchStartY);
+          touchedTileId = touchedTile?.id;
+        } else {
+          // Touch started outside board, ignore
+          touchedTileId = undefined;
+        }
+      }
     };
     
     const handleTouchMove = (e: Event) => {
@@ -650,6 +769,21 @@ export default function Game() {
     setTimeout(() => initGame(), 0);
   };
 
+  // Manual tile generation (Issue #17)
+  const handleGenerateTile = () => {
+    // Don't generate during animations
+    if (isAnimatingRef.current) return;
+    
+    const result = addNewTile(gameState.tiles, nextTileId);
+    if (result.tiles.length > gameState.tiles.length) {
+      setGameState(prev => ({
+        ...prev,
+        tiles: result.tiles,
+      }));
+      setNextTileId(result.nextId);
+    }
+  };
+
   return (
     <div className="game">
       <h1>素因数分解ゲーム</h1>
@@ -666,7 +800,7 @@ export default function Game() {
         {gameState.tiles.map(tile => (
           <div
             key={tile.id}
-            className={`tile ${tile.isNew ? 'tile-new' : ''} ${tile.isMoving ? 'tile-moving' : ''} ${tile.isDividing ? 'tile-dividing' : ''} ${tile.isChaining ? 'tile-chaining' : ''} ${tile.isDisappearing ? 'tile-disappearing' : ''}`}
+            className={`tile ${tile.isNew ? 'tile-new' : ''} ${tile.isMoving ? 'tile-moving' : ''} ${tile.isDividing ? 'tile-dividing' : ''} ${tile.isChaining ? 'tile-chaining' : ''} ${tile.isDisappearing ? 'tile-disappearing' : ''} ${tile.isPowerEliminating ? 'tile-power-eliminating' : ''} ${tile.powerType === 'square' ? 'tile-power-square' : ''} ${tile.powerType === 'cube' ? 'tile-power-cube' : ''}`}
             style={{
               gridColumn: tile.col + 1,
               gridRow: tile.row + 1,
@@ -676,8 +810,14 @@ export default function Game() {
             {tile.value || ''}
           </div>
         ))}
-        {gameState.chainCount !== undefined && gameState.chainCount > 0 && (
-          <div className="chain-counter">
+        {gameState.chainCount !== undefined && gameState.chainCount > 0 && gameState.chainPosition && (
+          <div 
+            className="chain-counter"
+            style={{
+              gridColumn: Math.floor(gameState.chainPosition.col) + 1,
+              gridRow: Math.floor(gameState.chainPosition.row) + 1,
+            }}
+          >
             {gameState.chainCount}連鎖!
           </div>
         )}
@@ -733,7 +873,10 @@ export default function Game() {
             />
           </label>
         </div>
-        <button onClick={handleReset}>リセット</button>
+        <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '15px' }}>
+          <button onClick={handleReset}>リセット</button>
+          <button onClick={handleGenerateTile}>タイル生成</button>
+        </div>
       </div>
       
       <div className="instructions">
