@@ -187,12 +187,16 @@ export default function Game() {
       
       // Store this step if changes occurred
       if (hasChanges) {
-        chainSteps.push([...currentTiles]);
+        // Filter out disappearing tiles (value 0) from chain steps for animation
+        chainSteps.push(currentTiles.filter(t => t.value !== 0));
       }
     }
     
+    // Filter out disappearing tiles (value 0) before returning
+    const finalTiles = currentTiles.filter(t => t.value !== 0);
+    
     // Return the next available tile ID
-    return { tiles: currentTiles, scoreGained: totalScoreGained, chainCount, chainSteps, nextTileId: currentTileId };
+    return { tiles: finalTiles, scoreGained: totalScoreGained, chainCount, chainSteps, nextTileId: currentTileId };
   }, [nextTileId]);
 
   // Move tiles in a direction
@@ -225,6 +229,7 @@ export default function Game() {
     
     const movedTiles: Tile[] = [];
     const occupiedPositions = new Map<string, Tile>();
+    const mergedTileIds = new Set<number>(); // Track original IDs of tiles that merged
     
     // Mark non-moving tiles as occupied
     if (tileId !== undefined) {
@@ -270,6 +275,10 @@ export default function Game() {
             occupiedPositions.delete(posKey);
             path.push({row: nextRow, col: nextCol});
             
+            // Track that these tiles merged (use original IDs)
+            mergedTileIds.add(tile.id);
+            mergedTileIds.add(occupant.id);
+            
             if (newValue === 1) {
               // Tile disappears, add score - mark with isDisappearing
               movedTiles.push({
@@ -305,6 +314,10 @@ export default function Game() {
             const mergedScore = Math.max(tile.value, occupant.value);
             
             occupiedPositions.delete(posKey);
+            
+            // Track that these tiles merged (use original IDs)
+            mergedTileIds.add(tile.id);
+            mergedTileIds.add(occupant.id);
             
             if (newValue === 1) {
               // Mark for removal and disappear animation
@@ -366,7 +379,8 @@ export default function Game() {
     // Include non-moving tiles if we were only moving one tile
     if (tileId !== undefined) {
       const movedTileIds = new Set(movedTiles.map(t => t.id));
-      movedTiles.push(...newTiles.filter(t => t.id !== tileId && !movedTileIds.has(t.id)));
+      // Exclude the moved tile, tiles with new IDs, and tiles that were merged
+      movedTiles.push(...newTiles.filter(t => t.id !== tileId && !movedTileIds.has(t.id) && !mergedTileIds.has(t.id)));
     }
     
     if (!moved) return;
@@ -387,7 +401,8 @@ export default function Game() {
       // Include non-moving tiles
       if (tileId !== undefined) {
         const movedTileIds = new Set(movedTiles.map(t => t.id));
-        intermediateState.push(...newTiles.filter(t => t.id !== tileId && !movedTileIds.has(t.id)));
+        // Exclude tiles that were merged
+        intermediateState.push(...newTiles.filter(t => t.id !== tileId && !movedTileIds.has(t.id) && !mergedTileIds.has(t.id)));
       }
       
       setGameState(prev => ({
