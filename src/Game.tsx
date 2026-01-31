@@ -369,7 +369,9 @@ export default function Game() {
     // Add new tile if needed
     let finalTiles = allTiles;
     if (newMoveCount % params.k === 0 || hasDisappearing) {
-      finalTiles = addNewTile(allTiles.filter(t => t.value !== 0));
+      // Add new tile but preserve disappearing tiles for animation
+      const newTilesWithoutDisappearing = addNewTile(allTiles.filter(t => t.value !== 0));
+      finalTiles = [...disappearingTiles, ...newTilesWithoutDisappearing];
     }
     
     // Set state with all tiles including those that will disappear
@@ -547,6 +549,7 @@ export default function Game() {
               gridRow: tile.row + 1,
             }}
           >
+            {/* Show empty string for disappearing tiles (value 0) during animation */}
             {tile.value || ''}
           </div>
         ))}
