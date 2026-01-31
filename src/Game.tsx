@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import './Game.css';
 import type { Tile, GameState, GameParams } from './types';
 import { generateRandomTileValue, isDivisor, getEmptyPositions } from './gameLogic';
@@ -16,6 +16,7 @@ export default function Game() {
   const [params, setParams] = useState<GameParams>(DEFAULT_PARAMS);
   const [tempParams, setTempParams] = useState<GameParams>(DEFAULT_PARAMS);
   const [nextTileId, setNextTileId] = useState(0);
+  const boardRef = useRef<HTMLDivElement>(null);
 
   // Initialize game state based on params
   const [gameState, setGameState] = useState<GameState>(() => {
@@ -392,9 +393,9 @@ export default function Game() {
       }
     };
     
-    const board = document.querySelector('.board');
+    const board = boardRef.current;
     if (board) {
-      board.addEventListener('touchstart', handleTouchStart, { passive: true });
+      board.addEventListener('touchstart', handleTouchStart, { passive: false });
       board.addEventListener('touchmove', handleTouchMove, { passive: false });
       board.addEventListener('touchend', handleTouchEnd, { passive: true });
       
@@ -420,7 +421,7 @@ export default function Game() {
         <div className="moves">Moves: {gameState.moveCount}</div>
       </div>
       
-      <div className="board" style={{
+      <div className="board" ref={boardRef} style={{
         gridTemplateColumns: `repeat(${params.n}, 1fr)`,
         gridTemplateRows: `repeat(${params.n}, 1fr)`,
       }}>
