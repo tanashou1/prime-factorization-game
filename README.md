@@ -1,4 +1,7 @@
 # prime-factorization-game
+
+**Play the game here: https://tanashou1.github.io/prime-factorization-game/**
+
 nxnマスの盤面に、数字のタイルが出てきます。
 数字のタイルはスライドで動かすことができます。
 片方が片方の数字の約数であれば合体して、割った数になります。

@@ -154,6 +154,7 @@ export default function Game() {
                     scoreValue: mergedScore,
                     isDisappearing: true,
                     isChaining: true,
+                    isDividing: true, // Add division animation flag
                   });
                 } else {
                   // Assign NEW unique ID to prevent duplicate key errors
@@ -163,6 +164,7 @@ export default function Game() {
                     value: newValue,
                     scoreValue: mergedScore,
                     isChaining: true, // Mark as part of chain for animation
+                    isDividing: true, // Add division animation flag
                   });
                 }
                 
@@ -285,11 +287,13 @@ export default function Game() {
             mergedTileIds.add(tile.id);
             mergedTileIds.add(occupant.id);
             
+            const mergedTileId = currentNextTileId++;
+            
             if (newValue === 1) {
               // Tile disappears, add score - mark with isDisappearing
               movedTiles.push({
                 ...tile,
-                id: currentNextTileId++, // Assign unique ID to merged tile
+                id: mergedTileId, // Assign unique ID to merged tile
                 value: 0, // Mark for removal
                 scoreValue: mergedScore,
                 row: nextRow,
@@ -300,7 +304,7 @@ export default function Game() {
             } else {
               const mergedTile = {
                 ...occupant,
-                id: currentNextTileId++, // Assign unique ID to merged tile
+                id: mergedTileId, // Assign unique ID to merged tile
                 value: newValue,
                 scoreValue: mergedScore,
                 row: nextRow,
@@ -310,6 +314,12 @@ export default function Game() {
               movedTiles.push(mergedTile);
               occupiedPositions.set(posKey, mergedTile);
             }
+            
+            // Store path for the new merged tile ID
+            if (path.length > 1) {
+              tileMovementPaths.set(mergedTileId, path);
+            }
+            
             moved = true;
             break;
           } else if (isDivisor(occupant.value, tile.value)) {
@@ -325,11 +335,13 @@ export default function Game() {
             mergedTileIds.add(tile.id);
             mergedTileIds.add(occupant.id);
             
+            const mergedTileId = currentNextTileId++;
+            
             if (newValue === 1) {
               // Mark for removal and disappear animation
               movedTiles.push({
                 ...tile,
-                id: currentNextTileId++, // Assign unique ID to merged tile
+                id: mergedTileId, // Assign unique ID to merged tile
                 value: 0,
                 scoreValue: mergedScore,
                 row: newRow,
@@ -340,7 +352,7 @@ export default function Game() {
             } else {
               const mergedTile = {
                 ...tile,
-                id: currentNextTileId++, // Assign unique ID to merged tile
+                id: mergedTileId, // Assign unique ID to merged tile
                 value: newValue,
                 scoreValue: mergedScore,
                 row: newRow,
@@ -350,6 +362,12 @@ export default function Game() {
               movedTiles.push(mergedTile);
               occupiedPositions.set(`${newRow},${newCol}`, mergedTile);
             }
+            
+            // Store path for the new merged tile ID  
+            if (path.length > 1) {
+              tileMovementPaths.set(mergedTileId, path);
+            }
+            
             moved = true;
             break;
           } else {
@@ -416,8 +434,8 @@ export default function Game() {
         tiles: intermediateState,
       }));
       
-      // Wait for step animation (80ms per step for smooth movement)
-      await new Promise(resolve => setTimeout(resolve, 80));
+      // Wait for step animation (100ms per step for smoother, more visible movement)
+      await new Promise(resolve => setTimeout(resolve, 100));
     }
     
     // Calculate score from disappearing tiles but KEEP them for animation
@@ -433,8 +451,8 @@ export default function Game() {
       moveCount: newMoveCount,
     });
     
-    // Wait for final position CSS transition to complete (100ms)
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Wait for final position CSS transition to complete (150ms)
+    await new Promise(resolve => setTimeout(resolve, 150));
     
     // Now process chain reactions step by step
     const activeTiles = movedTiles.filter(t => t.value !== 0);
@@ -450,14 +468,16 @@ export default function Game() {
       const stepTiles = chainResult.chainSteps[i];
       
       // Update state with this chain step, including disappearing tiles for visual feedback
+      // Also display chain counter if this is a chain (more than 1 chain count)
       setGameState(prevState => ({
         ...prevState,
         tiles: [...disappearingTiles, ...stepTiles],
         score: score + scoreGained,
+        chainCount: chainResult.chainCount > 0 ? chainResult.chainCount : undefined,
       }));
       
-      // Wait for chain animation to complete
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Wait for chain animation to complete (increased from 500ms to 800ms for better visibility)
+      await new Promise(resolve => setTimeout(resolve, 800));
     }
     
     // After chains complete, remove disappearing tiles and add new tile if needed
@@ -479,6 +499,7 @@ export default function Game() {
       tiles: finalTiles,
       score: score + scoreGained,
       moveCount: newMoveCount,
+      chainCount: undefined, // Clear chain counter
     });
     
     // Clear animation flags after a short delay
@@ -655,6 +676,11 @@ export default function Game() {
             {tile.value || ''}
           </div>
         ))}
+        {gameState.chainCount !== undefined && gameState.chainCount > 0 && (
+          <div className="chain-counter">
+            {gameState.chainCount}連鎖!
+          </div>
+        )}
       </div>
       
       <div className="controls">
