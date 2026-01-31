@@ -7,6 +7,8 @@ export interface Tile {
   isMoving?: boolean; // Track if tile is currently moving
   isDividing?: boolean; // Track if tile just divided
   isChaining?: boolean; // Track if tile is part of a chain reaction
+  isNew?: boolean; // Track if tile is newly spawned (for appear animation)
+  isDisappearing?: boolean; // Track if tile is disappearing (value became 0)
 }
 
 export interface GameState {
