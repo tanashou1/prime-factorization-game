@@ -15,6 +15,7 @@ export interface GameState {
   tiles: Tile[];
   score: number;
   moveCount: number;
+  chainCount?: number; // Display chain count during combo
 }
 
 export interface GameParams {
