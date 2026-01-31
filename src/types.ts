@@ -3,6 +3,7 @@ export interface Tile {
   value: number;
   row: number;
   col: number;
+  scoreValue?: number; // Track original product for scoring when tile becomes 1
 }
 
 export interface GameState {

@@ -15,8 +15,27 @@ const DEFAULT_PARAMS: GameParams = {
 export default function Game() {
   const [params, setParams] = useState<GameParams>(DEFAULT_PARAMS);
   const [tempParams, setTempParams] = useState<GameParams>(DEFAULT_PARAMS);
-  const [gameState, setGameState] = useState<GameState>({ tiles: [], score: 0, moveCount: 0 });
   const [nextTileId, setNextTileId] = useState(0);
+
+  // Initialize game state based on params
+  const [gameState, setGameState] = useState<GameState>(() => {
+    const tiles: Tile[] = [];
+    const emptyPositions = getEmptyPositions([], DEFAULT_PARAMS.n);
+    
+    for (let i = 0; i < DEFAULT_PARAMS.m && emptyPositions.length > 0; i++) {
+      const randomIndex = Math.floor(Math.random() * emptyPositions.length);
+      const pos = emptyPositions.splice(randomIndex, 1)[0];
+      
+      tiles.push({
+        id: i,
+        value: generateRandomTileValue(DEFAULT_PARAMS.p),
+        row: pos.row,
+        col: pos.col,
+      });
+    }
+    
+    return { tiles, score: 0, moveCount: 0 };
+  });
 
   // Initialize game
   const initGame = useCallback(() => {
@@ -37,11 +56,7 @@ export default function Game() {
     
     setGameState({ tiles, score: 0, moveCount: 0 });
     setNextTileId(params.m);
-  }, [params]);
-
-  useEffect(() => {
-    initGame();
-  }, [initGame]);
+  }, [params.n, params.m, params.p]);
 
   // Add a new tile
   const addNewTile = useCallback((tiles: Tile[]) => {
@@ -109,14 +124,15 @@ export default function Game() {
               
               if (isDivisor(smaller.value, larger.value)) {
                 const newValue = larger.value / smaller.value;
-                const originalProduct = larger.value * smaller.value;
+                const mergedScore = (larger.scoreValue || larger.value) * (smaller.scoreValue || smaller.value);
                 
                 if (newValue === 1) {
-                  totalScoreGained += originalProduct;
+                  totalScoreGained += mergedScore;
                 } else {
                   newTiles.push({
                     ...larger,
                     value: newValue,
+                    scoreValue: mergedScore,
                   });
                 }
                 
@@ -146,7 +162,7 @@ export default function Game() {
   // Move tiles in a direction
   const moveTiles = useCallback((direction: Direction) => {
     const { tiles: currentTiles, score, moveCount } = gameState;
-    let newTiles = [...currentTiles];
+    const newTiles = [...currentTiles];
     let moved = false;
     
     // Sort tiles based on direction
@@ -188,6 +204,7 @@ export default function Game() {
           if (isDivisor(tile.value, occupant.value)) {
             // Merge: tile divides into occupant
             const newValue = occupant.value / tile.value;
+            const mergedScore = (tile.scoreValue || tile.value) * (occupant.scoreValue || occupant.value);
             
             occupiedPositions.delete(posKey);
             
@@ -196,28 +213,27 @@ export default function Game() {
               movedTiles.push({
                 ...tile,
                 value: 0, // Mark for removal
+                scoreValue: mergedScore,
                 row: nextRow,
                 col: nextCol,
               });
             } else {
-              movedTiles.push({
+              const mergedTile = {
                 ...occupant,
                 value: newValue,
+                scoreValue: mergedScore,
                 row: nextRow,
                 col: nextCol,
-              });
-              occupiedPositions.set(posKey, {
-                ...occupant,
-                value: newValue,
-                row: nextRow,
-                col: nextCol,
-              });
+              };
+              movedTiles.push(mergedTile);
+              occupiedPositions.set(posKey, mergedTile);
             }
             moved = true;
             break;
           } else if (isDivisor(occupant.value, tile.value)) {
             // Merge: occupant divides into tile
             const newValue = tile.value / occupant.value;
+            const mergedScore = (tile.scoreValue || tile.value) * (occupant.scoreValue || occupant.value);
             
             occupiedPositions.delete(posKey);
             
@@ -226,6 +242,7 @@ export default function Game() {
               movedTiles.push({
                 ...tile,
                 value: 0,
+                scoreValue: mergedScore,
                 row: newRow,
                 col: newCol,
               });
@@ -233,6 +250,7 @@ export default function Game() {
               const mergedTile = {
                 ...tile,
                 value: newValue,
+                scoreValue: mergedScore,
                 row: newRow,
                 col: newCol,
               };
@@ -267,10 +285,11 @@ export default function Game() {
     
     if (!moved) return;
     
-    // Filter out tiles with value 0 (disappeared)
+    // Filter out tiles with value 0 (disappeared) and calculate score
     let filteredTiles = movedTiles.filter(t => t.value !== 0);
-    let scoreGained = movedTiles.filter(t => t.value === 0)
-      .reduce((sum, t) => sum + t.value, 0);
+    let scoreGained = movedTiles
+      .filter(t => t.value === 0)
+      .reduce((sum, t) => sum + (t.scoreValue || 0), 0);
     
     // Process chain reactions
     const chainResult = processChainReactions(filteredTiles);
