@@ -395,6 +395,8 @@ export default function Game() {
     
     const board = boardRef.current;
     if (board) {
+      // Use passive: false for touchstart and touchmove to allow preventDefault()
+      // This is necessary to prevent page scrolling/refreshing during swipe gestures
       board.addEventListener('touchstart', handleTouchStart, { passive: false });
       board.addEventListener('touchmove', handleTouchMove, { passive: false });
       board.addEventListener('touchend', handleTouchEnd, { passive: true });
