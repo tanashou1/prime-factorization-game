@@ -246,6 +246,11 @@ export default function Game() {
     const tileMovementPaths = new Map<number, Array<{row: number, col: number}>>();
     
     for (const tile of sorted) {
+      // Skip tiles that have already been merged
+      if (mergedTileIds.has(tile.id)) {
+        continue;
+      }
+      
       let newRow = tile.row;
       let newCol = tile.col;
       const path: Array<{row: number, col: number}> = [{row: newRow, col: newCol}];
