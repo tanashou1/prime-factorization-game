@@ -80,6 +80,7 @@ export default function Game() {
       value: generateRandomTileValue(params.p),
       row: pos.row,
       col: pos.col,
+      isNew: true, // Mark as new for appear animation
     };
     
     setNextTileId(nextTileId + 1);
@@ -143,6 +144,14 @@ export default function Game() {
                 
                 if (newValue === 1) {
                   totalScoreGained += mergedScore * currentMultiplier;
+                  // Mark as disappearing instead of removing immediately
+                  newTiles.push({
+                    ...larger,
+                    value: 0,
+                    scoreValue: mergedScore,
+                    isDisappearing: true,
+                    isChaining: true,
+                  });
                 } else {
                   newTiles.push({
                     ...larger,
@@ -244,7 +253,7 @@ export default function Game() {
             occupiedPositions.delete(posKey);
             
             if (newValue === 1) {
-              // Tile disappears, add score
+              // Tile disappears, add score - mark with isDisappearing
               movedTiles.push({
                 ...tile,
                 value: 0, // Mark for removal
@@ -252,6 +261,7 @@ export default function Game() {
                 row: nextRow,
                 col: nextCol,
                 isDividing: true, // Mark for division effect
+                isDisappearing: true, // Mark for disappear animation
               });
             } else {
               const mergedTile = {
@@ -277,7 +287,7 @@ export default function Game() {
             occupiedPositions.delete(posKey);
             
             if (newValue === 1) {
-              // Mark for removal
+              // Mark for removal and disappear animation
               movedTiles.push({
                 ...tile,
                 value: 0,
@@ -285,6 +295,7 @@ export default function Game() {
                 row: newRow,
                 col: newCol,
                 isDividing: true, // Mark for division effect
+                isDisappearing: true, // Mark for disappear animation
               });
             } else {
               const mergedTile = {
@@ -332,42 +343,61 @@ export default function Game() {
     
     if (!moved) return;
     
-    // Filter out tiles with value 0 (disappeared) and calculate score
-    let filteredTiles = movedTiles.filter(t => t.value !== 0);
-    let scoreGained = movedTiles
-      .filter(t => t.value === 0)
-      .reduce((sum, t) => sum + (t.scoreValue || 0), 0);
+    // Calculate score from disappearing tiles but KEEP them for animation
+    const disappearingTiles = movedTiles.filter(t => t.value === 0);
+    let scoreGained = disappearingTiles.reduce((sum, t) => sum + (t.scoreValue || 0), 0);
+    
+    // Keep all tiles including disappearing ones for now
+    let allTiles = movedTiles;
     
     // Process chain reactions with chain multiplier
-    const chainResult = processChainReactions(filteredTiles, 1);
-    filteredTiles = chainResult.tiles;
+    const chainResult = processChainReactions(allTiles.filter(t => t.value !== 0), 1);
+    
+    // Combine non-disappearing tiles with chain result
+    allTiles = [...disappearingTiles, ...chainResult.tiles];
     scoreGained += chainResult.scoreGained;
     
-    // Clear animation flags after a short delay
-    animationTimeoutRef.current = window.setTimeout(() => {
-      setGameState(prevState => ({
-        ...prevState,
-        tiles: prevState.tiles.map(t => ({
-          ...t,
-          isMoving: false,
-          isDividing: false,
-          isChaining: false,
-        })),
-      }));
-    }, 300);
+    // Calculate animation duration based on chain count and disappearing tiles
+    const hasDisappearing = disappearingTiles.length > 0;
+    const baseDelay = 300; // Base delay for movement
+    const chainDelay = chainResult.chainCount > 0 ? 500 + (chainResult.chainCount * 300) : 0;
+    const disappearDelay = hasDisappearing ? 500 : 0;
+    const totalAnimationDelay = Math.max(baseDelay, chainDelay, disappearDelay);
     
     const newMoveCount = moveCount + 1;
     
     // Add new tile if needed
-    if (newMoveCount % params.k === 0 || movedTiles.some(t => t.value === 0)) {
-      filteredTiles = addNewTile(filteredTiles);
+    if (newMoveCount % params.k === 0 || hasDisappearing) {
+      allTiles = addNewTile(allTiles.filter(t => t.value !== 0));
+    } else {
+      allTiles = allTiles.filter(t => t.value !== 0);
     }
     
+    // Set state with all tiles including those that will disappear
     setGameState({
-      tiles: filteredTiles,
+      tiles: movedTiles.length > 0 ? [...disappearingTiles, ...chainResult.tiles] : allTiles,
       score: score + scoreGained,
       moveCount: newMoveCount,
     });
+    
+    // Clear animation flags and remove disappearing tiles after animation completes
+    animationTimeoutRef.current = window.setTimeout(() => {
+      setGameState(prevState => {
+        // First filter out disappeared tiles, then clear flags
+        const activeTiles = prevState.tiles.filter(t => t.value !== 0).map(t => ({
+          ...t,
+          isMoving: false,
+          isDividing: false,
+          isChaining: false,
+          isNew: false,
+        }));
+        
+        return {
+          ...prevState,
+          tiles: activeTiles,
+        };
+      });
+    }, totalAnimationDelay);
   }, [gameState, params, addNewTile, processChainReactions]);
 
   // Handle keyboard input
@@ -512,13 +542,13 @@ export default function Game() {
         {gameState.tiles.map(tile => (
           <div
             key={tile.id}
-            className={`tile ${tile.isMoving ? 'tile-moving' : ''} ${tile.isDividing ? 'tile-dividing' : ''} ${tile.isChaining ? 'tile-chaining' : ''}`}
+            className={`tile ${tile.isNew ? 'tile-new' : ''} ${tile.isMoving ? 'tile-moving' : ''} ${tile.isDividing ? 'tile-dividing' : ''} ${tile.isChaining ? 'tile-chaining' : ''} ${tile.isDisappearing ? 'tile-disappearing' : ''}`}
             style={{
               gridColumn: tile.col + 1,
               gridRow: tile.row + 1,
             }}
           >
-            {tile.value}
+            {tile.value || ''}
           </div>
         ))}
       </div>
