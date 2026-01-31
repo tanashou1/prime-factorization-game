@@ -18,4 +18,6 @@ body {
   place-items: center;
   min-width: 320px;
   min-height: 100vh;
+  /* Prevent pull-to-refresh on mobile browsers */
+  overscroll-behavior-y: contain;
 }

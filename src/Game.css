@@ -39,6 +39,10 @@ h1 {
   min-width: 400px;
   min-height: 400px;
   position: relative;
+  /* Prevent pull-to-refresh and enable swipe gestures */
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .tile {
