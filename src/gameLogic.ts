@@ -97,15 +97,26 @@ export function checkPerfectPowerElimination(value1: number, value2: number): 's
   return null;
 }
 
-// Get all divisors of a number
+// Get all divisors of a number (optimized to check only up to sqrt(n))
 function getDivisors(n: number): number[] {
   const divisors: number[] = [];
-  for (let i = 2; i <= n; i++) {
+  const sqrt = Math.sqrt(n);
+  
+  for (let i = 2; i <= sqrt; i++) {
     if (n % i === 0) {
       divisors.push(i);
+      const complement = n / i;
+      if (complement !== i && complement !== n) {
+        divisors.push(complement);
+      }
     }
   }
-  return divisors;
+  
+  // Always add n itself as a divisor
+  divisors.push(n);
+  
+  // Sort divisors in ascending order for consistent results
+  return divisors.sort((a, b) => a - b);
 }
 
 // Find all ways to factor a number into exactly 'count' factors (> 1)
