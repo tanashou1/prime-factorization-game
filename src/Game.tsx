@@ -661,7 +661,40 @@ export default function Game() {
     
     const newMoveCount = moveCount + 1;
     
-    // Show the final move result
+    // Issue #35: First show highlighting phase for tiles that will interact
+    // Identify tiles that have interaction flags (mergeHighlight, isPowerEliminating, etc.)
+    const tilesWithInteraction = movedTiles.filter(t => 
+      t.mergeHighlight || t.isPowerEliminating || t.isDividing || t.isDisappearing
+    );
+    
+    if (tilesWithInteraction.length > 0) {
+      // Show highlighting phase (without other effects yet)
+      const highlightedTiles = movedTiles.map(t => {
+        if (t.mergeHighlight || t.isPowerEliminating || t.isDividing || t.isDisappearing) {
+          return {
+            ...t,
+            isHighlighting: true,
+            // Temporarily remove effect flags during highlighting
+            isDividing: false,
+            isDisappearing: false,
+            isPowerEliminating: false,
+            mergeHighlight: false,
+          };
+        }
+        return t;
+      });
+      
+      setGameState({
+        tiles: highlightedTiles,
+        score: score, // Don't add score yet
+        moveCount: newMoveCount,
+      });
+      
+      // Wait for highlighting animation to complete (400ms)
+      await new Promise(resolve => setTimeout(resolve, 400));
+    }
+    
+    // Show the final move result with actual effects
     setGameState({
       tiles: movedTiles,
       score: score + scoreGained,
@@ -691,6 +724,41 @@ export default function Game() {
         const avgRow = chainingTiles.reduce((sum, t) => sum + t.row, 0) / chainingTiles.length;
         const avgCol = chainingTiles.reduce((sum, t) => sum + t.col, 0) / chainingTiles.length;
         chainPosition = { row: avgRow, col: avgCol };
+      }
+      
+      // Issue #35: First show highlighting phase for chain reaction tiles
+      const tilesWithChainInteraction = stepTiles.filter(t => 
+        t.isChaining || t.mergeHighlight || t.isPowerEliminating || t.isDividing || t.isDisappearing
+      );
+      
+      if (tilesWithChainInteraction.length > 0) {
+        // Show highlighting phase for chain reaction
+        const highlightedChainTiles = stepTiles.map(t => {
+          if (t.isChaining || t.mergeHighlight || t.isPowerEliminating || t.isDividing || t.isDisappearing) {
+            return {
+              ...t,
+              isHighlighting: true,
+              // Temporarily remove effect flags during highlighting
+              isDividing: false,
+              isDisappearing: false,
+              isPowerEliminating: false,
+              mergeHighlight: false,
+              isChaining: false, // Keep chain counter but no animation yet
+            };
+          }
+          return t;
+        });
+        
+        setGameState(prevState => ({
+          ...prevState,
+          tiles: [...disappearingTiles, ...highlightedChainTiles],
+          score: score + scoreGained,
+          chainCount: chainResult.chainCount > 0 ? chainResult.chainCount : undefined,
+          chainPosition: chainPosition,
+        }));
+        
+        // Wait for highlighting animation to complete (400ms)
+        await new Promise(resolve => setTimeout(resolve, 400));
       }
       
       // Update state with this chain step, including disappearing tiles for visual feedback
@@ -744,6 +812,7 @@ export default function Game() {
             isPowerEliminating: false,
             powerType: undefined,
             mergeHighlight: false, // Clear merge highlight (Issue #22)
+            isHighlighting: false, // Clear highlighting (Issue #35)
           }));
         
         return {
@@ -926,19 +995,33 @@ export default function Game() {
         gridTemplateColumns: `repeat(${params.n}, 1fr)`,
         gridTemplateRows: `repeat(${params.n}, 1fr)`,
       }}>
-        {gameState.tiles.map(tile => (
-          <div
-            key={tile.id}
-            className={`tile ${tile.isNew ? 'tile-new' : ''} ${tile.isMoving ? 'tile-moving' : ''} ${tile.isDividing ? 'tile-dividing' : ''} ${tile.isChaining ? 'tile-chaining' : ''} ${tile.isDisappearing ? 'tile-disappearing' : ''} ${tile.isPowerEliminating ? 'tile-power-eliminating' : ''} ${tile.powerType === 'square' ? 'tile-power-square' : ''} ${tile.powerType === 'cube' ? 'tile-power-cube' : ''} ${tile.mergeHighlight ? 'tile-merge-highlight' : ''}`}
-            style={{
-              gridColumn: tile.col + 1,
-              gridRow: tile.row + 1,
-            }}
-          >
-            {/* Show empty string for disappearing tiles (value 0) during animation */}
-            {tile.value || ''}
-          </div>
-        ))}
+        {gameState.tiles.map(tile => {
+          const tileClasses = ['tile'];
+          if (tile.isNew) tileClasses.push('tile-new');
+          if (tile.isMoving) tileClasses.push('tile-moving');
+          if (tile.isDividing) tileClasses.push('tile-dividing');
+          if (tile.isChaining) tileClasses.push('tile-chaining');
+          if (tile.isDisappearing) tileClasses.push('tile-disappearing');
+          if (tile.isPowerEliminating) tileClasses.push('tile-power-eliminating');
+          if (tile.powerType === 'square') tileClasses.push('tile-power-square');
+          if (tile.powerType === 'cube') tileClasses.push('tile-power-cube');
+          if (tile.mergeHighlight) tileClasses.push('tile-merge-highlight');
+          if (tile.isHighlighting) tileClasses.push('tile-highlighting');
+
+          return (
+            <div
+              key={tile.id}
+              className={tileClasses.join(' ')}
+              style={{
+                gridColumn: tile.col + 1,
+                gridRow: tile.row + 1,
+              }}
+            >
+              {/* Show empty string for disappearing tiles (value 0) during animation */}
+              {tile.value || ''}
+            </div>
+          );
+        })}
         {gameState.chainCount !== undefined && gameState.chainCount > 0 && gameState.chainPosition && (
           <div 
             className="chain-counter"
