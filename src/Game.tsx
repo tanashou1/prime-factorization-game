@@ -739,7 +739,7 @@ export default function Game() {
       
       // Clear animation flag after all animations complete
       isAnimatingRef.current = false;
-    }, 100); // Short delay to clear flags
+    }, 1300); // Wait for all animations to complete (longest is 1.2s)
   }, [gameState, params, addNewTile, processChainReactions, nextTileId]);
 
   // Handle keyboard input
