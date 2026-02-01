@@ -1,0 +1,19 @@
+{
+  "$schema": "https://modelcontextprotocol.io/schema/mcp-config.json",
+  "name": "prime-factorization-game-mcp",
+  "version": "1.0.0",
+  "description": "MCP configuration for Playwright testing in prime-factorization-game",
+  "servers": {
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@executeautomation/playwright-mcp-server"
+      ],
+      "env": {
+        "PLAYWRIGHT_HEADLESS": "true",
+        "PLAYWRIGHT_BASE_URL": "http://localhost:5173"
+      }
+    }
+  }
+}
