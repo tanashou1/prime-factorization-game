@@ -51,6 +51,13 @@ export default function Game() {
 
   // Initialize game
   const initGame = useCallback(() => {
+    // Clear any ongoing animations
+    isAnimatingRef.current = false;
+    if (animationTimeoutRef.current) {
+      clearTimeout(animationTimeoutRef.current);
+      animationTimeoutRef.current = null;
+    }
+    
     const tiles: Tile[] = [];
     const emptyPositions = getEmptyPositions([], params.n);
     
@@ -1021,11 +1028,28 @@ export default function Game() {
     
     const result = addNewTile(gameState.tiles, nextTileId);
     if (result.tiles.length > gameState.tiles.length) {
+      // Set animation flag to prevent multiple clicks during animation
+      isAnimatingRef.current = true;
+      
       setGameState(prev => ({
         ...prev,
         tiles: result.tiles,
       }));
       setNextTileId(result.nextId);
+      
+      // Clear animation flags after the appear animation completes
+      setTimeout(() => {
+        setGameState(prevState => ({
+          ...prevState,
+          tiles: prevState.tiles.map(t => ({
+            ...t,
+            isNew: false,
+          })),
+        }));
+        
+        // Clear animation flag
+        isAnimatingRef.current = false;
+      }, 250); // Appear animation is 0.2s, add small buffer
     }
   };
 
