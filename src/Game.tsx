@@ -450,7 +450,7 @@ export default function Game() {
           const powerType = checkPerfectPowerElimination(tile.value, occupant.value);
           if (powerType !== null) {
             // Both tiles disappear with special animation
-            // Award score for both tiles (sum of their values)
+            // Award score for both tiles (they have equal values, so score = value * 2)
             const mergedScore = tile.value * 2;
             scoreGainedFromMoves += mergedScore;
             
@@ -671,8 +671,8 @@ export default function Game() {
       await new Promise(resolve => setTimeout(resolve, 100));
     }
     
-    // Calculate score from initial moves (already tracked in scoreGainedFromMoves)
-    // Note: We no longer calculate score only from disappearing tiles - every merge awards score
+    // Use the score accumulated from initial moves
+    // Score is now awarded for every merge, not just when tiles disappear
     let scoreGained = scoreGainedFromMoves;
     
     // Still track disappearing tiles for animation purposes
