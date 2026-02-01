@@ -61,9 +61,10 @@ Before implementing any changes, determine the version increment:
 1. **Verify version was updated** in `package.json`
 2. **Run quality checks**:
    ```bash
-   npm run lint    # Must pass
-   npm run build   # Must succeed
-   npm run dev     # Manual testing
+   npm run test:run # All tests must pass
+   npm run lint     # Must pass
+   npm run build    # Must succeed
+   npm run dev      # Manual testing
    ```
 
 3. **PR Title Format** (include version):
@@ -86,6 +87,7 @@ Before implementing any changes, determine the version increment:
    - [List specific changes]
    
    ## Testing
+   - [x] Tests passed (`npm run test:run`)
    - [x] Linting passed
    - [x] Build successful
    - [x] Manual testing completed
@@ -139,22 +141,52 @@ Current: v1.1.0 → New: v2.0.0
 ### Key Files
 - `src/Game.tsx` - Main game component
 - `src/gameLogic.ts` - Core game logic
+- `src/gameLogic.test.ts` - Automated tests for game logic
 - `src/types.ts` - TypeScript type definitions
 - `package.json` - **VERSION IS HERE** (line 4)
 
 ### Code Quality Standards
 ```bash
 # Always run before finalizing PR
-npm run lint    # ESLint must pass
-npm run build   # TypeScript compilation must succeed
+npm run test:run # All automated tests must pass
+npm run lint     # ESLint must pass
+npm run build    # TypeScript compilation must succeed
 ```
 
 ### Testing Approach
-Since this is a game, manual testing is required:
-1. Run `npm run dev`
-2. Test the specific feature/fix
-3. Verify no regression in existing functionality
-4. Take screenshots for UI changes
+The project has automated tests for core game logic:
+1. Run `npm run test:run` to execute all tests
+2. All tests must pass before submitting PR
+3. Manual testing is also required for UI/UX:
+   - Run `npm run dev`
+   - Test the specific feature/fix
+   - Verify no regression in existing functionality
+   - Take screenshots for UI changes
+
+### 🧪 Automated Testing Requirements
+
+**The agent MUST run automated tests before completing any PR.**
+
+Available test commands:
+- `npm test` - Run tests in watch mode (for development)
+- `npm run test:run` - Run tests once (for CI/validation)
+- `npm run test:ui` - Run tests with interactive UI
+
+**Test Coverage** (as of v1.4.0):
+- 33 automated tests covering core game logic
+- Tests are located in `src/gameLogic.test.ts`
+- Tests cover: prime generation, tile values, divisibility, board positions, perfect powers, and multi-tile factorization
+
+**When to run tests:**
+1. ✅ **Before submitting any PR** - Run `npm run test:run`
+2. ✅ **After making code changes** - Run tests to catch regressions
+3. ✅ **Before code review** - Ensure all tests pass
+4. ✅ **If tests fail** - Fix the issue or update tests if behavior changed intentionally
+
+**What if tests fail?**
+- If a test fails due to a bug in your code → Fix your code
+- If a test fails due to intentional behavior change → Update the test
+- Never submit a PR with failing tests unless explicitly discussed
 
 ---
 
@@ -190,11 +222,13 @@ git push origin vX.Y.Z
 ## 🚫 Common Mistakes to Avoid
 
 1. ❌ **Forgetting to update version** → Every PR must update version (except docs-only)
-2. ❌ **Wrong version increment** → Review decision tree carefully
-3. ❌ **Not including version in PR title** → Format: `Type: Description (vX.Y.Z)`
-4. ❌ **Skipping lint/build** → Always verify quality before submitting
-5. ❌ **Adding features in PATCH** → Features = MINOR, only bugs = PATCH
-6. ❌ **Breaking changes in MINOR** → Breaking = MAJOR always
+2. ❌ **Not running tests** → Always run `npm run test:run` before submitting
+3. ❌ **Wrong version increment** → Review decision tree carefully
+4. ❌ **Not including version in PR title** → Format: `Type: Description (vX.Y.Z)`
+5. ❌ **Skipping lint/build** → Always verify quality before submitting
+6. ❌ **Adding features in PATCH** → Features = MINOR, only bugs = PATCH
+7. ❌ **Breaking changes in MINOR** → Breaking = MAJOR always
+8. ❌ **Submitting PR with failing tests** → All tests must pass
 
 ---
 
@@ -218,6 +252,7 @@ Refer to detailed documentation:
 - [ ] **Version updated** in `package.json` (line 4)
 - [ ] **Version in PR title**: `Type: Description (vX.Y.Z)`
 - [ ] **Version in PR description** with reason
+- [ ] **All tests passed**: `npm run test:run`
 - [ ] **Linting passed**: `npm run lint`
 - [ ] **Build successful**: `npm run build`
 - [ ] **Manual testing completed**: `npm run dev`
