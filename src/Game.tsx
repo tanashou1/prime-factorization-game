@@ -404,17 +404,18 @@ export default function Game() {
     
     isAnimatingRef.current = true; // Set animation flag at start
     
-    const { tiles: currentTiles, score, moveCount } = gameState;
-    // Filter out any stale tiles (disappearing tiles with value 0, or tiles with animation flags that should be gone)
-    const newTiles = [...currentTiles.filter(t => t.value !== 0 && !t.isDisappearing)];
-    let moved = false;
-    let currentNextTileId = nextTileId; // Local counter for new tile IDs
-    
-    // Clear any pending animation timeouts
-    if (animationTimeoutRef.current) {
-      clearTimeout(animationTimeoutRef.current);
-      animationTimeoutRef.current = null;
-    }
+    try {
+      const { tiles: currentTiles, score, moveCount } = gameState;
+      // Filter out any stale tiles (disappearing tiles with value 0, or tiles with animation flags that should be gone)
+      const newTiles = [...currentTiles.filter(t => t.value !== 0 && !t.isDisappearing)];
+      let moved = false;
+      let currentNextTileId = nextTileId; // Local counter for new tile IDs
+      
+      // Clear any pending animation timeouts
+      if (animationTimeoutRef.current) {
+        clearTimeout(animationTimeoutRef.current);
+        animationTimeoutRef.current = null;
+      }
     
     // If tileId is specified, only move that tile
     const tilesToMove = tileId !== undefined 
@@ -878,6 +879,15 @@ export default function Game() {
       // Clear animation flag after all animations complete
       isAnimatingRef.current = false;
     }, 1300); // Wait for all animations to complete (longest is 1.2s)
+    } catch (error) {
+      // On error, immediately clear the animation flag to prevent the game from becoming unresponsive
+      console.error('Error in moveTiles:', error);
+      isAnimatingRef.current = false;
+      if (animationTimeoutRef.current) {
+        clearTimeout(animationTimeoutRef.current);
+        animationTimeoutRef.current = null;
+      }
+    }
   }, [gameState, params, addNewTile, processChainReactions, nextTileId]);
 
   // Handle keyboard input
@@ -1031,6 +1041,12 @@ export default function Game() {
       // Set animation flag to prevent multiple clicks during animation
       isAnimatingRef.current = true;
       
+      // Clear any pending animation timeouts
+      if (animationTimeoutRef.current) {
+        clearTimeout(animationTimeoutRef.current);
+        animationTimeoutRef.current = null;
+      }
+      
       setGameState(prev => ({
         ...prev,
         tiles: result.tiles,
@@ -1038,7 +1054,7 @@ export default function Game() {
       setNextTileId(result.nextId);
       
       // Clear animation flags after the appear animation completes
-      setTimeout(() => {
+      animationTimeoutRef.current = window.setTimeout(() => {
         setGameState(prevState => ({
           ...prevState,
           tiles: prevState.tiles.map(t => ({

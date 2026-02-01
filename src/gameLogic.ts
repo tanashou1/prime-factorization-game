@@ -59,15 +59,17 @@ export function getEmptyPositions(
   return empty;
 }
 
+// Epsilon for floating point precision comparisons
+const FLOAT_PRECISION_EPSILON = 0.0001;
+
 // Check if a number is a perfect square (n²)
 export function isPerfectSquare(n: number): boolean {
   if (n <= 0) return false;
   const sqrt = Math.sqrt(n);
-  return sqrt === Math.floor(sqrt);
+  // Use epsilon to handle floating point precision
+  const rounded = Math.round(sqrt);
+  return Math.abs(rounded * rounded - n) < FLOAT_PRECISION_EPSILON;
 }
-
-// Epsilon for floating point precision comparisons
-const FLOAT_PRECISION_EPSILON = 0.0001;
 
 // Check if a number is a perfect cube (n³)
 export function isPerfectCube(n: number): boolean {
