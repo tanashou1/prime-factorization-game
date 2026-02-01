@@ -150,21 +150,22 @@ export default function Game() {
           
           if (factorResult !== null) {
             // Multi-tile factorization found!
-            const product = factorResult.factorTiles.reduce((acc, ft) => acc * ft.value, 1);
+            // Calculate the product of all divisors used
+            const product = factorResult.factorTiles.reduce((acc, ft) => acc * ft.divisor, 1);
             const centerNewValue = tile.value / product;
-            const mergedScore = tile.value; // Use original tile value for scoring
+            
             const currentMultiplier = chainMultiplier * Math.pow(2, chainCount);
             
             chainCount++;
             
             // Update the center tile
             if (centerNewValue === 1) {
-              totalScoreGained += mergedScore * currentMultiplier;
+              totalScoreGained += tile.value * currentMultiplier;
               newTiles.push({
                 ...tile,
                 id: currentTileId++,
                 value: 0,
-                scoreValue: mergedScore,
+                scoreValue: tile.value,
                 isDisappearing: true,
                 isChaining: true,
                 isDividing: true,
@@ -175,7 +176,6 @@ export default function Game() {
                 ...tile,
                 id: currentTileId++,
                 value: centerNewValue,
-                scoreValue: mergedScore,
                 isChaining: true,
                 isDividing: true,
                 mergeHighlight: true,
@@ -188,22 +188,37 @@ export default function Game() {
             // Build a map from id to index for efficient lookup
             const idToIndexMap = new Map(adjacentTiles.map(at => [at.id, at.index]));
             
-            // Update each factor tile (they all become 1 and disappear)
+            // Update each adjacent tile by dividing it by its divisor
             for (const factorTile of factorResult.factorTiles) {
               const factorIndex = idToIndexMap.get(factorTile.id);
               if (factorIndex !== undefined) {
                 processed.add(factorIndex);
-                totalScoreGained += factorTile.value * currentMultiplier;
-                newTiles.push({
-                  ...currentTiles[factorIndex],
-                  id: currentTileId++,
-                  value: 0,
-                  scoreValue: factorTile.value,
-                  isDisappearing: true,
-                  isChaining: true,
-                  isDividing: true,
-                  mergeHighlight: true,
-                });
+                const newValue = factorTile.value / factorTile.divisor;
+                
+                if (newValue === 1) {
+                  // Tile becomes 1, so it disappears
+                  totalScoreGained += factorTile.value * currentMultiplier;
+                  newTiles.push({
+                    ...currentTiles[factorIndex],
+                    id: currentTileId++,
+                    value: 0,
+                    scoreValue: factorTile.value,
+                    isDisappearing: true,
+                    isChaining: true,
+                    isDividing: true,
+                    mergeHighlight: true,
+                  });
+                } else {
+                  // Tile is divided but doesn't disappear
+                  newTiles.push({
+                    ...currentTiles[factorIndex],
+                    id: currentTileId++,
+                    value: newValue,
+                    isChaining: true,
+                    isDividing: true,
+                    mergeHighlight: true,
+                  });
+                }
               }
             }
             

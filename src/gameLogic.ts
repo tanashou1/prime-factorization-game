@@ -97,36 +97,70 @@ export function checkPerfectPowerElimination(value1: number, value2: number): 's
   return null;
 }
 
+// Get all divisors of a number
+function getDivisors(n: number): number[] {
+  const divisors: number[] = [];
+  for (let i = 2; i <= n; i++) {
+    if (n % i === 0) {
+      divisors.push(i);
+    }
+  }
+  return divisors;
+}
+
+// Find all ways to factor a number into exactly 'count' factors (> 1)
+function getFactorizations(n: number, count: number): number[][] {
+  if (count === 1) {
+    return [[n]];
+  }
+  
+  const results: number[][] = [];
+  const divisors = getDivisors(n);
+  
+  for (const d of divisors) {
+    if (d > n / d) break; // Avoid duplicate factorizations
+    
+    const remaining = n / d;
+    if (count === 2) {
+      results.push([d, remaining]);
+    } else {
+      // Recursively factor the remaining part
+      const subFactorizations = getFactorizations(remaining, count - 1);
+      for (const subFactor of subFactorizations) {
+        // Only add if factors are in non-decreasing order to avoid duplicates
+        if (d <= subFactor[0]) {
+          results.push([d, ...subFactor]);
+        }
+      }
+    }
+  }
+  
+  return results;
+}
+
 // Check if a tile can be factored by multiple adjacent tiles (Issue #5)
-// Returns the tiles that can divide the center tile
+// The center tile is factored, and each factor divides an adjacent tile
 export function checkMultiTileFactorization(
   centerTile: { value: number; row: number; col: number },
   adjacentTiles: Array<{ value: number; row: number; col: number; id: number }>
-): { canFactor: boolean; factorTiles: Array<{ id: number; value: number }> } | null {
+): { canFactor: boolean; factorTiles: Array<{ id: number; value: number; divisor: number }> } | null {
   // We need at least 2 adjacent tiles for multi-tile factorization
   if (adjacentTiles.length < 2) return null;
   
-  // Try all combinations of adjacent tiles to see if their product divides the center tile
-  // We'll try combinations of size 2 or more
-  for (let size = 2; size <= adjacentTiles.length; size++) {
-    // Generate all combinations of 'size' tiles
-    const combinations = getCombinations(adjacentTiles, size);
+  // Try to factor the center tile into 2 or more factors
+  for (let numFactors = 2; numFactors <= adjacentTiles.length; numFactors++) {
+    const factorizations = getFactorizations(centerTile.value, numFactors);
     
-    for (const combination of combinations) {
-      // Calculate the product of values in this combination
-      const product = combination.reduce((acc, tile) => acc * tile.value, 1);
+    for (const factors of factorizations) {
+      // Try to match each factor to an adjacent tile
+      // We need to find a valid assignment where each factor divides an adjacent tile
+      const assignment = findFactorAssignment(factors, adjacentTiles);
       
-      // Check if this product exactly divides the center tile
-      if (centerTile.value % product === 0) {
-        // Each factor tile becomes 1 (then disappears)
-        const factorTiles = combination.map(tile => ({
-          id: tile.id,
-          value: tile.value,
-        }));
-        
+      if (assignment !== null) {
+        // Found a valid factorization!
         return {
           canFactor: true,
-          factorTiles,
+          factorTiles: assignment,
         };
       }
     }
@@ -135,26 +169,52 @@ export function checkMultiTileFactorization(
   return null;
 }
 
-// Helper function to generate all combinations of a given size
-function getCombinations<T>(array: T[], size: number): T[][] {
-  if (size === 1) return array.map(item => [item]);
-  if (size === array.length) return [array];
+// Find an assignment of factors to adjacent tiles such that each factor divides its assigned tile
+function findFactorAssignment(
+  factors: number[],
+  adjacentTiles: Array<{ value: number; row: number; col: number; id: number }>
+): Array<{ id: number; value: number; divisor: number }> | null {
+  // Try all permutations of adjacent tiles to find a valid assignment
+  const usedIndices = new Set<number>();
+  const assignment: Array<{ id: number; value: number; divisor: number }> = [];
   
-  const combinations: T[][] = [];
-  
-  function combine(start: number, current: T[]) {
-    if (current.length === size) {
-      combinations.push([...current]);
-      return;
+  function tryAssign(factorIndex: number): boolean {
+    if (factorIndex === factors.length) {
+      return true; // All factors assigned successfully
     }
     
-    for (let i = start; i < array.length; i++) {
-      current.push(array[i]);
-      combine(i + 1, current);
-      current.pop();
+    const factor = factors[factorIndex];
+    
+    for (let i = 0; i < adjacentTiles.length; i++) {
+      if (usedIndices.has(i)) continue;
+      
+      const tile = adjacentTiles[i];
+      if (tile.value % factor === 0) {
+        // This tile can be divided by this factor
+        usedIndices.add(i);
+        assignment.push({
+          id: tile.id,
+          value: tile.value,
+          divisor: factor,
+        });
+        
+        if (tryAssign(factorIndex + 1)) {
+          return true;
+        }
+        
+        // Backtrack
+        usedIndices.delete(i);
+        assignment.pop();
+      }
     }
+    
+    return false;
   }
   
-  combine(0, []);
-  return combinations;
+  if (tryAssign(0)) {
+    return assignment;
+  }
+  
+  return null;
 }
+
