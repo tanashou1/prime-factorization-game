@@ -158,9 +158,11 @@ export default function Game() {
             
             chainCount++;
             
+            // Award score for the center tile interaction
+            totalScoreGained += tile.value * currentMultiplier;
+            
             // Update the center tile
             if (centerNewValue === 1) {
-              totalScoreGained += tile.value * currentMultiplier;
               newTiles.push({
                 ...tile,
                 id: currentTileId++,
@@ -195,9 +197,11 @@ export default function Game() {
                 processed.add(factorIndex);
                 const newValue = factorTile.value / factorTile.divisor;
                 
+                // Award score for the adjacent tile interaction
+                totalScoreGained += factorTile.value * currentMultiplier;
+                
                 if (newValue === 1) {
                   // Tile becomes 1, so it disappears
-                  totalScoreGained += factorTile.value * currentMultiplier;
                   newTiles.push({
                     ...currentTiles[factorIndex],
                     id: currentTileId++,
@@ -245,8 +249,8 @@ export default function Game() {
               const powerType = checkPerfectPowerElimination(tile.value, otherTile.value);
               if (powerType !== null) {
                 // Both tiles disappear with special animation
-                // Score: Sum of both identical tile values
-                const mergedScore = tile.value * 2;
+                // Score: Sum of both tile values
+                const mergedScore = tile.value + otherTile.value;
                 const currentMultiplier = chainMultiplier * Math.pow(2, chainCount);
                 totalScoreGained += mergedScore * currentMultiplier;
                 
@@ -303,8 +307,10 @@ export default function Game() {
                 
                 chainCount++;
                 
+                // Award score for the merge interaction
+                totalScoreGained += mergedScore * currentMultiplier;
+                
                 if (newValue === 1) {
-                  totalScoreGained += mergedScore * currentMultiplier;
                   // Mark as disappearing instead of removing immediately
                   // Assign NEW unique ID to prevent duplicate key errors
                   newTiles.push({
@@ -400,6 +406,7 @@ export default function Game() {
     const movedTiles: Tile[] = [];
     const occupiedPositions = new Map<string, Tile>();
     const mergedTileIds = new Set<number>(); // Track original IDs of tiles that merged
+    let scoreGainedFromMoves = 0; // Track score from initial merges
     
     // Mark non-moving tiles as occupied
     if (tileId !== undefined) {
@@ -443,6 +450,9 @@ export default function Game() {
           const powerType = checkPerfectPowerElimination(tile.value, occupant.value);
           if (powerType !== null) {
             // Both tiles disappear with special animation
+            // Award score for both tiles (in perfect power elimination, both tiles have equal values)
+            const mergedScore = tile.value + occupant.value;
+            scoreGainedFromMoves += mergedScore;
             
             occupiedPositions.delete(posKey);
             path.push({row: nextRow, col: nextCol});
@@ -488,6 +498,9 @@ export default function Game() {
             // Score calculation: Use the larger number instead of the product
             // This prevents score inflation and makes gameplay more balanced
             const mergedScore = Math.max(tile.value, occupant.value);
+            
+            // Award score for this merge
+            scoreGainedFromMoves += mergedScore;
             
             occupiedPositions.delete(posKey);
             path.push({row: nextRow, col: nextCol});
@@ -539,6 +552,9 @@ export default function Game() {
             // Score calculation: Use the larger number instead of the product
             // This prevents score inflation and makes gameplay more balanced
             const mergedScore = Math.max(tile.value, occupant.value);
+            
+            // Award score for this merge
+            scoreGainedFromMoves += mergedScore;
             
             occupiedPositions.delete(posKey);
             path.push({row: nextRow, col: nextCol});
@@ -661,9 +677,12 @@ export default function Game() {
       await new Promise(resolve => setTimeout(resolve, 100));
     }
     
-    // Calculate score from disappearing tiles but KEEP them for animation
+    // Use the score accumulated from initial moves
+    // Score is now awarded for every merge, not just when tiles disappear
+    let scoreGained = scoreGainedFromMoves;
+    
+    // Still track disappearing tiles for animation purposes
     const disappearingTiles = movedTiles.filter(t => t.value === 0);
-    let scoreGained = disappearingTiles.reduce((sum, t) => sum + (t.scoreValue || 0), 0);
     
     const newMoveCount = moveCount + 1;
     
