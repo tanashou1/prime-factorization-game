@@ -711,9 +711,6 @@ export default function Game() {
     // Score is now awarded for every merge, not just when tiles disappear
     let scoreGained = scoreGainedFromMoves;
     
-    // Still track disappearing tiles for animation purposes
-    const disappearingTiles = movedTiles.filter(t => t.value === 0);
-    
     const newMoveCount = moveCount + 1;
     
     // Issue #35: First show highlighting phase for tiles that will interact
@@ -833,9 +830,14 @@ export default function Game() {
     // After chains complete, remove disappearing tiles and add new tile if needed
     let finalTiles = chainResult.tiles;
     
-    // Add new tile if needed
-    const hasDisappearing = disappearingTiles.length > 0;
-    if (newMoveCount % params.k === 0 || hasDisappearing) {
+    // Add new tile if needed (periodic spawn OR when tiles disappeared)
+    // Count active tiles before move (filter stale tiles)
+    const tilesBeforeMove = currentTiles.filter(t => t.value !== 0 && !t.isDisappearing).length;
+    // Count active tiles after move and chains
+    const tilesAfterChains = finalTiles.length;
+    const tilesDisappeared = tilesAfterChains < tilesBeforeMove;
+    
+    if (newMoveCount % params.k === 0 || tilesDisappeared) {
       const newTileResult = addNewTile(chainResult.tiles, currentNextTileId);
       finalTiles = newTileResult.tiles;
       currentNextTileId = newTileResult.nextId;
@@ -864,6 +866,7 @@ export default function Game() {
             isDividing: false,
             isChaining: false,
             isNew: false,
+            isDisappearing: false, // Clear disappearing flag
             isPowerEliminating: false,
             powerType: undefined,
             mergeHighlight: false, // Clear merge highlight (Issue #22)
