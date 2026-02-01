@@ -104,7 +104,13 @@ export default function Game() {
       const newTiles: Tile[] = [];
       const processed = new Set<number>();
       
-      for (let i = 0; i < currentTiles.length; i++) {
+      // Sort tiles by value (smallest first) to process in correct order
+      const sortedIndices = currentTiles
+        .map((tile, index) => ({ tile, index }))
+        .sort((a, b) => a.tile.value - b.tile.value)
+        .map(item => item.index);
+      
+      for (const i of sortedIndices) {
         if (processed.has(i)) continue;
         
         const tile = currentTiles[i];
@@ -235,7 +241,9 @@ export default function Game() {
           continue; // Skip regular merge checks if multi-tile factorization occurred
         }
         
-        // Check adjacent tiles for regular merges (reuse adjacentDirections from above)
+        // Collect all adjacent tiles and sort them by value in descending order
+        // This ensures we check larger tiles first (as per the requirement)
+        const adjacentTilesList: Array<{ tile: typeof currentTiles[0]; index: number }> = [];
         for (const { dr, dc } of adjacentDirections) {
           const adjRow = tile.row + dr;
           const adjCol = tile.col + dc;
@@ -245,107 +253,116 @@ export default function Game() {
             
             const otherTile = currentTiles[j];
             if (otherTile.row === adjRow && otherTile.col === adjCol) {
-              // First check for perfect power elimination (Issue #16)
-              const powerType = checkPerfectPowerElimination(tile.value, otherTile.value);
-              if (powerType !== null) {
-                // Both tiles disappear with special animation
-                // Score: Sum of both tile values
-                const mergedScore = tile.value + otherTile.value;
-                const currentMultiplier = chainMultiplier * Math.pow(2, chainCount);
-                totalScoreGained += mergedScore * currentMultiplier;
-                
-                chainCount++;
-                
-                // Mark both tiles as disappearing with power elimination animation
-                newTiles.push({
-                  ...tile,
-                  id: currentTileId++,
-                  value: 0,
-                  scoreValue: tile.value,
-                  isDisappearing: true,
-                  isChaining: true,
-                  isPowerEliminating: true,
-                  powerType: powerType,
-                  mergeHighlight: true, // Highlight merge (Issue #22)
-                });
-                newTiles.push({
-                  ...otherTile,
-                  id: currentTileId++,
-                  value: 0,
-                  scoreValue: otherTile.value,
-                  isDisappearing: true,
-                  isChaining: true,
-                  isPowerEliminating: true,
-                  powerType: powerType,
-                  mergeHighlight: true, // Highlight merge (Issue #22)
-                });
-                
-                processed.add(i);
-                processed.add(j);
-                merged = true;
-                hasChanges = true;
-                break;
-              }
-              
-              // Check if they can merge normally
-              let larger, smaller;
-              if (tile.value > otherTile.value) {
-                larger = tile;
-                smaller = otherTile;
-              } else {
-                larger = otherTile;
-                smaller = tile;
-              }
-              
-              if (isDivisor(smaller.value, larger.value)) {
-                const newValue = larger.value / smaller.value;
-                // Score calculation: Use the larger number instead of the product
-                // This prevents score inflation and makes gameplay more balanced
-                // (e.g., 2 merging with 2 gives score of 2, not 4)
-                const mergedScore = Math.max(larger.value, smaller.value);
-                const currentMultiplier = chainMultiplier * Math.pow(2, chainCount);
-                
-                chainCount++;
-                
-                // Award score for the merge interaction
-                totalScoreGained += mergedScore * currentMultiplier;
-                
-                if (newValue === 1) {
-                  // Mark as disappearing instead of removing immediately
-                  // Assign NEW unique ID to prevent duplicate key errors
-                  newTiles.push({
-                    ...larger,
-                    id: currentTileId++, // Unique ID for merged tile
-                    value: 0,
-                    scoreValue: mergedScore,
-                    isDisappearing: true,
-                    isChaining: true,
-                    isDividing: true, // Add division animation flag
-                    mergeHighlight: true, // Highlight merge (Issue #22)
-                  });
-                } else {
-                  // Assign NEW unique ID to prevent duplicate key errors
-                  newTiles.push({
-                    ...larger,
-                    id: currentTileId++, // Unique ID for merged tile
-                    value: newValue,
-                    scoreValue: mergedScore,
-                    isChaining: true, // Mark as part of chain for animation
-                    isDividing: true, // Add division animation flag
-                    mergeHighlight: true, // Highlight merge (Issue #22)
-                  });
-                }
-                
-                processed.add(i);
-                processed.add(j);
-                merged = true;
-                hasChanges = true;
-                break;
-              }
+              adjacentTilesList.push({ tile: otherTile, index: j });
             }
           }
+        }
+        
+        // Sort adjacent tiles by value in descending order (largest first)
+        adjacentTilesList.sort((a, b) => b.tile.value - a.tile.value);
+        
+        // Check each adjacent tile in descending order
+        for (const { tile: otherTile, index: j } of adjacentTilesList) {
+          // First check for perfect power elimination (Issue #16)
+          const powerType = checkPerfectPowerElimination(tile.value, otherTile.value);
+          if (powerType !== null) {
+            // Both tiles disappear with special animation
+            // Score: Sum of both tile values
+            const mergedScore = tile.value + otherTile.value;
+            const currentMultiplier = chainMultiplier * Math.pow(2, chainCount);
+            totalScoreGained += mergedScore * currentMultiplier;
+            
+            chainCount++;
+            
+            // Mark both tiles as disappearing with power elimination animation
+            newTiles.push({
+              ...tile,
+              id: currentTileId++,
+              value: 0,
+              scoreValue: tile.value,
+              isDisappearing: true,
+              isChaining: true,
+              isPowerEliminating: true,
+              powerType: powerType,
+              mergeHighlight: true, // Highlight merge (Issue #22)
+            });
+            newTiles.push({
+              ...otherTile,
+              id: currentTileId++,
+              value: 0,
+              scoreValue: otherTile.value,
+              isDisappearing: true,
+              isChaining: true,
+              isPowerEliminating: true,
+              powerType: powerType,
+              mergeHighlight: true, // Highlight merge (Issue #22)
+            });
+            
+            processed.add(i);
+            processed.add(j);
+            merged = true;
+            hasChanges = true;
+            break;
+          }
           
-          if (merged) break;
+          // Check if the adjacent tile is a multiple of the current tile
+          // As per requirement: if surrounding tile is a multiple of current tile,
+          // delete current tile and divide the surrounding tile
+          if (isDivisor(tile.value, otherTile.value)) {
+            const newValue = otherTile.value / tile.value;
+            // Score calculation: Use the larger number
+            const mergedScore = Math.max(tile.value, otherTile.value);
+            const currentMultiplier = chainMultiplier * Math.pow(2, chainCount);
+            
+            chainCount++;
+            
+            // Award score for the merge interaction
+            totalScoreGained += mergedScore * currentMultiplier;
+            
+            // Current tile (smaller) is deleted - mark as disappearing
+            newTiles.push({
+              ...tile,
+              id: currentTileId++,
+              value: 0,
+              scoreValue: tile.value,
+              isDisappearing: true,
+              isChaining: true,
+              isDividing: true,
+              mergeHighlight: true,
+            });
+            
+            // Adjacent tile (larger) is updated in place
+            if (newValue === 1) {
+              // Adjacent tile becomes 1, so it disappears too
+              newTiles.push({
+                ...otherTile,
+                id: currentTileId++,
+                value: 0,
+                scoreValue: otherTile.value,
+                isDisappearing: true,
+                isChaining: true,
+                isDividing: true,
+                mergeHighlight: true,
+              });
+            } else {
+              // Adjacent tile is divided and stays (treated as newly moved)
+              newTiles.push({
+                ...otherTile,
+                id: currentTileId++,
+                value: newValue,
+                scoreValue: mergedScore,
+                isChaining: true,
+                isDividing: true,
+                mergeHighlight: true,
+              });
+            }
+            
+            processed.add(i);
+            processed.add(j);
+            merged = true;
+            hasChanges = true;
+            break;
+          }
         }
         
         if (!merged && !processed.has(i)) {
