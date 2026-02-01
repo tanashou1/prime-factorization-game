@@ -853,7 +853,7 @@ export default function Game() {
     });
     
     // Clear animation flags after a short delay
-    animationTimeoutRef.current = window.setTimeout(() => {
+    animationTimeoutRef.current = setTimeout(() => {
       setGameState(prevState => {
         // Clear animation flags and ensure no zero-value tiles remain
         const clearedTiles = prevState.tiles
@@ -1054,7 +1054,7 @@ export default function Game() {
       setNextTileId(result.nextId);
       
       // Clear animation flags after the appear animation completes
-      animationTimeoutRef.current = window.setTimeout(() => {
+      animationTimeoutRef.current = setTimeout(() => {
         setGameState(prevState => ({
           ...prevState,
           tiles: prevState.tiles.map(t => ({
