@@ -7,6 +7,6 @@ export default defineConfig({
   base: '/prime-factorization-game/',
   test: {
     globals: true,
-    environment: 'node',
+    environment: 'jsdom',
   },
 })
