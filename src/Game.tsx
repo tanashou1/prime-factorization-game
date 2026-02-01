@@ -310,8 +310,9 @@ export default function Game() {
           // delete current tile and divide the surrounding tile
           if (isDivisor(tile.value, otherTile.value)) {
             const newValue = otherTile.value / tile.value;
-            // Score calculation: Use the larger number
-            const mergedScore = Math.max(tile.value, otherTile.value);
+            // Score: Use the larger value (otherTile.value, since it's the multiple)
+            // Math.max is used for consistency with other merge logic, but otherTile.value is always larger
+            const mergedScore = otherTile.value;
             const currentMultiplier = chainMultiplier * Math.pow(2, chainCount);
             
             chainCount++;
@@ -320,6 +321,7 @@ export default function Game() {
             totalScoreGained += mergedScore * currentMultiplier;
             
             // Current tile (smaller) is deleted - mark as disappearing
+            // scoreValue is for animation display only, actual score already added above
             newTiles.push({
               ...tile,
               id: currentTileId++,
@@ -334,11 +336,12 @@ export default function Game() {
             // Adjacent tile (larger) is updated in place
             if (newValue === 1) {
               // Adjacent tile becomes 1, so it disappears too
+              // scoreValue is for animation display only
               newTiles.push({
                 ...otherTile,
                 id: currentTileId++,
                 value: 0,
-                scoreValue: otherTile.value,
+                scoreValue: newValue, // Display the final value (1) that it became
                 isDisappearing: true,
                 isChaining: true,
                 isDividing: true,
@@ -350,7 +353,7 @@ export default function Game() {
                 ...otherTile,
                 id: currentTileId++,
                 value: newValue,
-                scoreValue: mergedScore,
+                scoreValue: mergedScore, // For animation display
                 isChaining: true,
                 isDividing: true,
                 mergeHighlight: true,
