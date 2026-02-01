@@ -308,7 +308,8 @@ export default function Game() {
           // Check if the adjacent tile is a multiple of the current tile
           // As per requirement: if surrounding tile is a multiple of current tile,
           // delete current tile and divide the surrounding tile
-          if (isDivisor(tile.value, otherTile.value)) {
+          // Skip if values are equal (handled by perfect power elimination above)
+          if (tile.value !== otherTile.value && isDivisor(tile.value, otherTile.value)) {
             const newValue = otherTile.value / tile.value;
             // Score: Use the larger value (otherTile.value, since it's the multiple)
             // Math.max is used for consistency with other merge logic, but otherTile.value is always larger
@@ -512,7 +513,8 @@ export default function Game() {
           }
           
           // Check if they can merge normally
-          if (isDivisor(tile.value, occupant.value)) {
+          // Skip if values are equal (handled by perfect power elimination above)
+          if (tile.value !== occupant.value && isDivisor(tile.value, occupant.value)) {
             // Merge: tile divides into occupant
             const newValue = occupant.value / tile.value;
             // Score calculation: Use the larger number instead of the product
@@ -566,7 +568,7 @@ export default function Game() {
             
             moved = true;
             break;
-          } else if (isDivisor(occupant.value, tile.value)) {
+          } else if (tile.value !== occupant.value && isDivisor(occupant.value, tile.value)) {
             // Merge: occupant divides into tile
             const newValue = tile.value / occupant.value;
             // Score calculation: Use the larger number instead of the product
