@@ -249,8 +249,8 @@ export default function Game() {
               const powerType = checkPerfectPowerElimination(tile.value, otherTile.value);
               if (powerType !== null) {
                 // Both tiles disappear with special animation
-                // Score: Sum of both identical tile values
-                const mergedScore = tile.value * 2;
+                // Score: Sum of both tile values
+                const mergedScore = tile.value + otherTile.value;
                 const currentMultiplier = chainMultiplier * Math.pow(2, chainCount);
                 totalScoreGained += mergedScore * currentMultiplier;
                 
@@ -450,8 +450,8 @@ export default function Game() {
           const powerType = checkPerfectPowerElimination(tile.value, occupant.value);
           if (powerType !== null) {
             // Both tiles disappear with special animation
-            // Award score for both tiles (they have equal values, so score = value * 2)
-            const mergedScore = tile.value * 2;
+            // Award score for both tiles (in perfect power elimination, both tiles have equal values)
+            const mergedScore = tile.value + occupant.value;
             scoreGainedFromMoves += mergedScore;
             
             occupiedPositions.delete(posKey);
