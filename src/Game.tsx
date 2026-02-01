@@ -614,11 +614,14 @@ export default function Game() {
       }
     }
     
-    // Include non-moving tiles if we were only moving one tile
+    // Include non-moving tiles (both for single tile and all tiles movement)
+    const movedTileIds = new Set(movedTiles.map(t => t.id));
     if (tileId !== undefined) {
-      const movedTileIds = new Set(movedTiles.map(t => t.id));
-      // Exclude the moved tile, tiles with new IDs, and tiles that were merged
+      // Single tile movement: exclude only the moved tile
       movedTiles.push(...newTiles.filter(t => t.id !== tileId && !movedTileIds.has(t.id) && !mergedTileIds.has(t.id)));
+    } else {
+      // All tiles movement: include all tiles that didn't move or merge
+      movedTiles.push(...newTiles.filter(t => !movedTileIds.has(t.id) && !mergedTileIds.has(t.id)));
     }
     
     if (!moved) {
@@ -639,11 +642,14 @@ export default function Game() {
         return tile;
       });
       
-      // Include non-moving tiles
+      // Include non-moving tiles (both for single tile and all tiles movement)
+      const movedTileIds = new Set(movedTiles.map(t => t.id));
       if (tileId !== undefined) {
-        const movedTileIds = new Set(movedTiles.map(t => t.id));
-        // Exclude tiles that were merged
+        // Single tile movement: exclude only the moved tile
         intermediateState.push(...newTiles.filter(t => t.id !== tileId && !movedTileIds.has(t.id) && !mergedTileIds.has(t.id)));
+      } else {
+        // All tiles movement: include all non-moved tiles
+        intermediateState.push(...newTiles.filter(t => !movedTileIds.has(t.id) && !mergedTileIds.has(t.id)));
       }
       
       setGameState(prev => ({
