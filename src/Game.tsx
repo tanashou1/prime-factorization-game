@@ -831,13 +831,13 @@ export default function Game() {
     let finalTiles = chainResult.tiles;
     
     // Add new tile if needed (periodic spawn OR when tiles disappeared)
-    // Count active tiles before move (filter stale tiles)
-    const tilesBeforeMove = currentTiles.filter(t => t.value !== 0 && !t.isDisappearing).length;
+    // Count active tiles at start of move (before any processing)
+    const activeTilesBeforeMove = currentTiles.filter(t => t.value !== 0 && !t.isDisappearing).length;
     // Count active tiles after move and chains
-    const tilesAfterChains = finalTiles.length;
-    const tilesDisappeared = tilesAfterChains < tilesBeforeMove;
+    const activeTilesAfterChains = finalTiles.length;
+    const didTilesDisappear = activeTilesAfterChains < activeTilesBeforeMove;
     
-    if (newMoveCount % params.k === 0 || tilesDisappeared) {
+    if (newMoveCount % params.k === 0 || didTilesDisappear) {
       const newTileResult = addNewTile(chainResult.tiles, currentNextTileId);
       finalTiles = newTileResult.tiles;
       currentNextTileId = newTileResult.nextId;
