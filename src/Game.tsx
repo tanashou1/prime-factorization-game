@@ -995,19 +995,33 @@ export default function Game() {
         gridTemplateColumns: `repeat(${params.n}, 1fr)`,
         gridTemplateRows: `repeat(${params.n}, 1fr)`,
       }}>
-        {gameState.tiles.map(tile => (
-          <div
-            key={tile.id}
-            className={`tile ${tile.isNew ? 'tile-new' : ''} ${tile.isMoving ? 'tile-moving' : ''} ${tile.isDividing ? 'tile-dividing' : ''} ${tile.isChaining ? 'tile-chaining' : ''} ${tile.isDisappearing ? 'tile-disappearing' : ''} ${tile.isPowerEliminating ? 'tile-power-eliminating' : ''} ${tile.powerType === 'square' ? 'tile-power-square' : ''} ${tile.powerType === 'cube' ? 'tile-power-cube' : ''} ${tile.mergeHighlight ? 'tile-merge-highlight' : ''} ${tile.isHighlighting ? 'tile-highlighting' : ''}`}
-            style={{
-              gridColumn: tile.col + 1,
-              gridRow: tile.row + 1,
-            }}
-          >
-            {/* Show empty string for disappearing tiles (value 0) during animation */}
-            {tile.value || ''}
-          </div>
-        ))}
+        {gameState.tiles.map(tile => {
+          const tileClasses = ['tile'];
+          if (tile.isNew) tileClasses.push('tile-new');
+          if (tile.isMoving) tileClasses.push('tile-moving');
+          if (tile.isDividing) tileClasses.push('tile-dividing');
+          if (tile.isChaining) tileClasses.push('tile-chaining');
+          if (tile.isDisappearing) tileClasses.push('tile-disappearing');
+          if (tile.isPowerEliminating) tileClasses.push('tile-power-eliminating');
+          if (tile.powerType === 'square') tileClasses.push('tile-power-square');
+          if (tile.powerType === 'cube') tileClasses.push('tile-power-cube');
+          if (tile.mergeHighlight) tileClasses.push('tile-merge-highlight');
+          if (tile.isHighlighting) tileClasses.push('tile-highlighting');
+
+          return (
+            <div
+              key={tile.id}
+              className={tileClasses.join(' ')}
+              style={{
+                gridColumn: tile.col + 1,
+                gridRow: tile.row + 1,
+              }}
+            >
+              {/* Show empty string for disappearing tiles (value 0) during animation */}
+              {tile.value || ''}
+            </div>
+          );
+        })}
         {gameState.chainCount !== undefined && gameState.chainCount > 0 && gameState.chainPosition && (
           <div 
             className="chain-counter"
