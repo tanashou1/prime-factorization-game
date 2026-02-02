@@ -142,9 +142,10 @@ export default function Game() {
             
             const otherTile = currentTiles[j];
             if (otherTile.row === adjRow && otherTile.col === adjCol) {
-              // Only include adjacent tiles that have a valid divisibility relationship
-              // Either the adjacent tile divides the center tile, or the center tile divides the adjacent tile
-              if (isDivisor(otherTile.value, tile.value) || isDivisor(tile.value, otherTile.value)) {
+              // For multi-tile factorization, only include adjacent tiles that divide the center tile
+              // (i.e., adjacent tiles that are factors of the center tile)
+              // Tiles where center divides adjacent are handled by regular merge logic
+              if (isDivisor(otherTile.value, tile.value)) {
                 adjacentTiles.push({
                   value: otherTile.value,
                   row: otherTile.row,
