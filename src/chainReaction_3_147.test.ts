@@ -88,8 +88,8 @@ function simulateChainReaction(initialTiles: Tile[]): Tile[] {
           const newValue = otherTile.value / tile.value;
           console.log(`  ✓ MERGE: ${tile.value} divides ${otherTile.value} → ${newValue}`);
           
-          // Current tile disappears (value → 0, we'll filter it out)
-          // Adjacent tile becomes newValue
+          // Current tile disappears (not added to newTiles)
+          // Adjacent tile becomes newValue (added to newTiles)
           
           if (newValue === 1) {
             console.log(`  Both tiles disappear (newValue=1)`);
