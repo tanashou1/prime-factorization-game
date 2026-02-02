@@ -495,22 +495,24 @@ export default function Game() {
           return t;
         });
         
-        setGameState({
+        setGameState(prevState => ({
+          ...prevState,
           tiles: highlightedTiles,
           score: score + scoreGained,
           moveCount: newMoveCount,
-        });
+        }));
         
         // Wait for highlighting animation to complete (400ms)
         await new Promise(resolve => setTimeout(resolve, 400));
       }
       
       // Show the removal effects
-      setGameState({
+      setGameState(prevState => ({
+        ...prevState,
         tiles: removalResult.tiles,
         score: score + scoreGained,
         moveCount: newMoveCount,
-      });
+      }));
       
       // Wait for removal animation to complete (800ms)
       await new Promise(resolve => setTimeout(resolve, 800));

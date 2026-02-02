@@ -73,8 +73,8 @@ export function processTileRemoval(
     const adjacentTiles = getAdjacentTiles(movedTile, tiles)
       .filter(t => !tilesToRemove.has(t.id));
     
-    // Sort adjacent tiles by value in descending order
-    const sortedAdjacent = adjacentTiles.sort((a, b) => b.value - a.value);
+    // Sort adjacent tiles by value in descending order (create copy to avoid mutation)
+    const sortedAdjacent = [...adjacentTiles].sort((a, b) => b.value - a.value);
     
     // Check each adjacent tile
     for (const adjacentTile of sortedAdjacent) {
