@@ -354,7 +354,7 @@ export default function Game() {
                 ...otherTile,
                 id: currentTileId++,
                 value: 0,
-                scoreValue: newValue, // Display the final value (1) that it became
+                scoreValue: otherTile.value, // Display the original value before division
                 isDisappearing: true,
                 isChaining: true,
                 isDividing: true,
@@ -381,7 +381,7 @@ export default function Game() {
           }
         }
         
-        if (!merged && !processed.has(i)) {
+        if (!merged && !processed.has(i) && tile.value !== 0) {
           newTiles.push(tile);
         }
       }
@@ -390,8 +390,9 @@ export default function Game() {
       
       // Store this step if changes occurred
       if (hasChanges) {
-        // Filter out disappearing tiles (value 0) from chain steps for animation
-        chainSteps.push(currentTiles.filter(t => t.value !== 0));
+        // Keep ALL tiles including disappearing ones (value 0) for proper animation
+        // The animation system needs to see isDisappearing tiles to show the fade-out effect
+        chainSteps.push([...currentTiles]);
       }
     }
     
