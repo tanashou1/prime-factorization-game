@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import './Game.css';
 import type { Tile, GameState, GameParams } from './types';
 import { generateRandomTileValue, getEmptyPositions, checkPerfectPowerElimination, isDivisor } from './gameLogic';
-import { processChainReactions } from './chainReactionLogic';
+import { processTileRemoval } from './simpleTileRemoval';
 import packageJson from '../package.json';
 
 type Direction = 'up' | 'down' | 'left' | 'right';
@@ -464,46 +464,32 @@ export default function Game() {
     // Wait for final position CSS transition to complete (150ms)
     await new Promise(resolve => setTimeout(resolve, 150));
     
-    // Now process chain reactions step by step
+    // Now process tile removal for tiles that moved
     const activeTiles = movedTiles.filter(t => t.value !== 0);
-    const chainResult = processChainReactions(activeTiles, 1, currentNextTileId);
+    const removalResult = processTileRemoval(activeTiles, currentNextTileId);
     
-    // Update currentNextTileId from chain reactions
-    currentNextTileId = chainResult.nextTileId;
+    // Update currentNextTileId from tile removal
+    currentNextTileId = removalResult.nextTileId;
     
-    scoreGained += chainResult.scoreGained;
+    scoreGained += removalResult.scoreGained;
     
-    // Animate each chain step
-    for (let i = 0; i < chainResult.chainSteps.length; i++) {
-      const stepTiles = chainResult.chainSteps[i];
-      
-      // Calculate average position of chaining tiles for localized display (Issue #17)
-      const chainingTiles = stepTiles.filter(t => t.isChaining);
-      let chainPosition = undefined;
-      if (chainingTiles.length > 0) {
-        const avgRow = chainingTiles.reduce((sum, t) => sum + t.row, 0) / chainingTiles.length;
-        const avgCol = chainingTiles.reduce((sum, t) => sum + t.col, 0) / chainingTiles.length;
-        chainPosition = { row: avgRow, col: avgCol };
-      }
-      
-      // Issue #35: First show highlighting phase for chain reaction tiles
-      const tilesWithChainInteraction = stepTiles.filter(t => 
-        t.isChaining || t.mergeHighlight || t.isPowerEliminating || t.isDividing || t.isDisappearing
+    // Show tiles with removal effects if any
+    if (removalResult.scoreGained > 0) {
+      // Issue #35: First show highlighting phase for tiles that will interact
+      const tilesWithInteraction = removalResult.tiles.filter(t => 
+        t.mergeHighlight || t.isDisappearing
       );
       
-      if (tilesWithChainInteraction.length > 0) {
-        // Show highlighting phase for chain reaction
-        const highlightedChainTiles = stepTiles.map(t => {
-          if (t.isChaining || t.mergeHighlight || t.isPowerEliminating || t.isDividing || t.isDisappearing) {
+      if (tilesWithInteraction.length > 0) {
+        // Show highlighting phase for removal
+        const highlightedTiles = removalResult.tiles.map(t => {
+          if (t.mergeHighlight || t.isDisappearing) {
             return {
               ...t,
               isHighlighting: true,
               // Temporarily remove effect flags during highlighting
-              isDividing: false,
               isDisappearing: false,
-              isPowerEliminating: false,
               mergeHighlight: false,
-              isChaining: false, // Keep chain counter but no animation yet
             };
           }
           return t;
@@ -511,37 +497,34 @@ export default function Game() {
         
         setGameState(prevState => ({
           ...prevState,
-          tiles: highlightedChainTiles,
+          tiles: highlightedTiles,
           score: score + scoreGained,
-          chainCount: chainResult.chainCount > 0 ? chainResult.chainCount : undefined,
-          chainPosition: chainPosition,
+          moveCount: newMoveCount,
         }));
         
         // Wait for highlighting animation to complete (400ms)
         await new Promise(resolve => setTimeout(resolve, 400));
       }
       
-      // Update state with this chain step
-      // Also display chain counter if this is a chain (more than 1 chain count)
+      // Show the removal effects
       setGameState(prevState => ({
         ...prevState,
-        tiles: stepTiles,
+        tiles: removalResult.tiles,
         score: score + scoreGained,
-        chainCount: chainResult.chainCount > 0 ? chainResult.chainCount : undefined,
-        chainPosition: chainPosition,
+        moveCount: newMoveCount,
       }));
       
-      // Wait for chain animation to complete (increased from 500ms to 800ms for better visibility)
+      // Wait for removal animation to complete (800ms)
       await new Promise(resolve => setTimeout(resolve, 800));
     }
     
-    // After chains complete, remove disappearing tiles and add new tile if needed
-    let finalTiles = chainResult.tiles;
+    // After removal complete, filter out disappearing tiles
+    let finalTiles = removalResult.tiles.filter(t => t.value !== 0);
     
     // Add new tile if needed
-    const hasDisappearing = disappearingTiles.length > 0;
+    const hasDisappearing = disappearingTiles.length > 0 || removalResult.scoreGained > 0;
     if (newMoveCount % params.k === 0 || hasDisappearing) {
-      const newTileResult = addNewTile(chainResult.tiles, currentNextTileId);
+      const newTileResult = addNewTile(finalTiles, currentNextTileId);
       finalTiles = newTileResult.tiles;
       currentNextTileId = newTileResult.nextId;
     }
@@ -554,7 +537,6 @@ export default function Game() {
       tiles: finalTiles,
       score: score + scoreGained,
       moveCount: newMoveCount,
-      chainCount: undefined, // Clear chain counter
     });
     
     // Clear animation flags after a short delay
