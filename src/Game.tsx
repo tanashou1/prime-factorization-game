@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import './Game.css';
 import type { Tile, GameState, GameParams } from './types';
-import { generateRandomTileValue, getEmptyPositions, checkPerfectPowerElimination, isDivisor } from './gameLogic';
+import { generateRandomTileValue, getEmptyPositions, checkPerfectPowerElimination, checkEqualValueElimination, isDivisor } from './gameLogic';
 import { processTileRemoval } from './simpleTileRemoval';
 import packageJson from '../package.json';
 
@@ -180,11 +180,10 @@ export default function Game() {
         const occupant = occupiedPositions.get(posKey);
         
         if (occupant) {
-          // First check for perfect power elimination (Issue #16)
-          const powerType = checkPerfectPowerElimination(tile.value, occupant.value);
-          if (powerType !== null) {
+          // First check for equal value elimination (includes perfect powers)
+          if (checkEqualValueElimination(tile.value, occupant.value)) {
             // Both tiles disappear with special animation
-            // Award score for both tiles (in perfect power elimination, both tiles have equal values)
+            // Award score for both tiles (equal values)
             const mergedScore = tile.value + occupant.value;
             scoreGainedFromMoves += mergedScore;
             
@@ -195,7 +194,10 @@ export default function Game() {
             mergedTileIds.add(tile.id);
             mergedTileIds.add(occupant.id);
             
-            // Add both disappearing tiles with power elimination animation
+            // Check if they form a perfect power for animation purposes
+            const powerType = checkPerfectPowerElimination(tile.value, occupant.value);
+            
+            // Add both disappearing tiles with appropriate animation
             movedTiles.push({
               ...tile,
               id: currentNextTileId++,
@@ -204,8 +206,8 @@ export default function Game() {
               row: nextRow,
               col: nextCol,
               isDisappearing: true,
-              isPowerEliminating: true,
-              powerType: powerType,
+              isPowerEliminating: powerType !== null,
+              powerType: powerType || undefined,
               mergeHighlight: true, // Highlight merge (Issue #22)
             });
             movedTiles.push({
@@ -216,8 +218,8 @@ export default function Game() {
               row: nextRow,
               col: nextCol,
               isDisappearing: true,
-              isPowerEliminating: true,
-              powerType: powerType,
+              isPowerEliminating: powerType !== null,
+              powerType: powerType || undefined,
               mergeHighlight: true, // Highlight merge (Issue #22)
             });
             

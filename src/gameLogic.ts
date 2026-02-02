@@ -80,6 +80,12 @@ export function isPerfectCube(n: number): boolean {
   return Math.abs(rounded ** 3 - n) < FLOAT_PRECISION_EPSILON;
 }
 
+// Check if two tiles should eliminate each other (equal values)
+// Returns true if both values are equal, false otherwise
+export function checkEqualValueElimination(value1: number, value2: number): boolean {
+  return value1 === value2;
+}
+
 // Check if two equal numbers form a perfect power (square or cube)
 // Returns the type of power if they do, null otherwise
 export function checkPerfectPowerElimination(value1: number, value2: number): 'square' | 'cube' | null {

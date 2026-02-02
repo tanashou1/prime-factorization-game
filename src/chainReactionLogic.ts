@@ -6,7 +6,7 @@
  */
 
 import type { Tile } from './types';
-import { isDivisor, checkPerfectPowerElimination, checkMultiTileFactorization } from './gameLogic';
+import { isDivisor, checkPerfectPowerElimination, checkEqualValueElimination, checkMultiTileFactorization } from './gameLogic';
 
 /**
  * Get all tiles adjacent to a given tile
@@ -57,14 +57,20 @@ function processSingleIteration(
   let currentTileId = nextTileId;
 
   for (const tile of sortedTiles) {
+    // Skip tiles with value 0 (already disappearing)
+    if (tile.value === 0) {
+      result.push(tile);
+      continue;
+    }
+
     // Skip if already processed
     if (processedIds.has(tile.id)) {
       continue;
     }
 
-    // Get adjacent tiles that haven't been processed
+    // Get adjacent tiles that haven't been processed and have value > 0
     const adjacentTiles = getAdjacentTiles(tile, tiles).filter(
-      t => !processedIds.has(t.id)
+      t => !processedIds.has(t.id) && t.value > 0
     );
 
     // STEP 1: Check for multi-tile factorization
@@ -155,11 +161,9 @@ function processSingleIteration(
       }
     }
 
-    // STEP 2: Check for perfect power elimination with adjacent tiles
+    // STEP 2: Check for equal value elimination (any equal values, including perfect powers)
     for (const adjacentTile of adjacentTiles) {
-      const powerType = checkPerfectPowerElimination(tile.value, adjacentTile.value);
-      
-      if (powerType !== null) {
+      if (checkEqualValueElimination(tile.value, adjacentTile.value)) {
         // Both tiles eliminate each other
         changed = true;
         processedIds.add(tile.id);
@@ -168,6 +172,9 @@ function processSingleIteration(
         const mergedScore = tile.value + adjacentTile.value;
         scoreGained += mergedScore * chainMultiplier;
 
+        // Check if they form a perfect power for animation purposes
+        const powerType = checkPerfectPowerElimination(tile.value, adjacentTile.value);
+
         // Both tiles disappear
         result.push({
           ...tile,
@@ -175,8 +182,8 @@ function processSingleIteration(
           value: 0,
           scoreValue: tile.value,
           isDisappearing: true,
-          isPowerEliminating: true,
-          powerType: powerType,
+          isPowerEliminating: powerType !== null,
+          powerType: powerType || undefined,
           isChaining: true,
           mergeHighlight: true,
         });
@@ -187,8 +194,8 @@ function processSingleIteration(
           value: 0,
           scoreValue: adjacentTile.value,
           isDisappearing: true,
-          isPowerEliminating: true,
-          powerType: powerType,
+          isPowerEliminating: powerType !== null,
+          powerType: powerType || undefined,
           isChaining: true,
           mergeHighlight: true,
         });
@@ -197,7 +204,7 @@ function processSingleIteration(
       }
     }
 
-    // Skip if already processed by perfect power elimination
+    // Skip if already processed by equal value elimination
     if (processedIds.has(tile.id)) {
       continue;
     }
