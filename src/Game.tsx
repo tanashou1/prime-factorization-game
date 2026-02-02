@@ -142,18 +142,22 @@ export default function Game() {
             
             const otherTile = currentTiles[j];
             if (otherTile.row === adjRow && otherTile.col === adjCol) {
-              adjacentTiles.push({
-                value: otherTile.value,
-                row: otherTile.row,
-                col: otherTile.col,
-                id: otherTile.id,
-                index: j,
-              });
+              // Only include adjacent tiles that have a valid divisibility relationship
+              // Either the adjacent tile divides the center tile, or the center tile divides the adjacent tile
+              if (isDivisor(otherTile.value, tile.value) || isDivisor(tile.value, otherTile.value)) {
+                adjacentTiles.push({
+                  value: otherTile.value,
+                  row: otherTile.row,
+                  col: otherTile.col,
+                  id: otherTile.id,
+                  index: j,
+                });
+              }
             }
           }
         }
         
-        // Check for multi-tile factorization if we have multiple adjacent tiles
+        // Check for multi-tile factorization if we have multiple adjacent tiles with valid divisibility
         let multiTileFactored = false;
         if (adjacentTiles.length >= 2) {
           const factorResult = checkMultiTileFactorization(
