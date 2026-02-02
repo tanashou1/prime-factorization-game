@@ -806,7 +806,7 @@ export default function Game() {
         
         setGameState(prevState => ({
           ...prevState,
-          tiles: [...disappearingTiles, ...highlightedChainTiles],
+          tiles: highlightedChainTiles,
           score: score + scoreGained,
           chainCount: chainResult.chainCount > 0 ? chainResult.chainCount : undefined,
           chainPosition: chainPosition,
@@ -816,11 +816,11 @@ export default function Game() {
         await new Promise(resolve => setTimeout(resolve, 400));
       }
       
-      // Update state with this chain step, including disappearing tiles for visual feedback
+      // Update state with this chain step
       // Also display chain counter if this is a chain (more than 1 chain count)
       setGameState(prevState => ({
         ...prevState,
-        tiles: [...disappearingTiles, ...stepTiles],
+        tiles: stepTiles,
         score: score + scoreGained,
         chainCount: chainResult.chainCount > 0 ? chainResult.chainCount : undefined,
         chainPosition: chainPosition,
