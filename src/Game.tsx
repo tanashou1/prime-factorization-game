@@ -3,6 +3,7 @@ import './Game.css';
 import type { Tile, GameState, GameParams } from './types';
 import { generateRandomTileValue, getEmptyPositions, checkPerfectPowerElimination, checkEqualValueElimination, isDivisor } from './gameLogic';
 import { processChainReactions } from './chainReactionLogic';
+import { createCleanTile } from './utils/tileHelpers';
 import packageJson from '../package.json';
 
 type Direction = 'up' | 'down' | 'left' | 'right';
@@ -15,28 +16,6 @@ const DEFAULT_PARAMS: GameParams = {
   k: 3,  // new tile every 3 moves
   p: 7,  // primes up to 7 (2, 3, 5, 7)
 };
-
-// Helper function to create a clean tile with only essential properties
-// This prevents hidden state from persisting across moves
-function createCleanTile(source: Tile, overrides: Partial<Tile>): Tile {
-  return {
-    id: overrides.id ?? source.id,
-    value: overrides.value ?? source.value,
-    row: overrides.row ?? source.row,
-    col: overrides.col ?? source.col,
-    // Only include optional properties if explicitly provided in overrides
-    ...(overrides.scoreValue !== undefined && { scoreValue: overrides.scoreValue }),
-    ...(overrides.isMoving && { isMoving: overrides.isMoving }),
-    ...(overrides.isDividing && { isDividing: overrides.isDividing }),
-    ...(overrides.isChaining && { isChaining: overrides.isChaining }),
-    ...(overrides.isNew && { isNew: overrides.isNew }),
-    ...(overrides.isDisappearing && { isDisappearing: overrides.isDisappearing }),
-    ...(overrides.isPowerEliminating && { isPowerEliminating: overrides.isPowerEliminating }),
-    ...(overrides.powerType && { powerType: overrides.powerType }),
-    ...(overrides.mergeHighlight && { mergeHighlight: overrides.mergeHighlight }),
-    ...(overrides.isHighlighting && { isHighlighting: overrides.isHighlighting }),
-  };
-}
 
 export default function Game() {
   const [params, setParams] = useState<GameParams>(DEFAULT_PARAMS);

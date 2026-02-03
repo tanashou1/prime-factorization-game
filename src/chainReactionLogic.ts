@@ -7,30 +7,7 @@
 
 import type { Tile } from './types';
 import { isDivisor, checkPerfectPowerElimination, checkEqualValueElimination, checkMultiTileFactorization } from './gameLogic';
-
-/**
- * Helper function to create a clean tile with only essential properties
- * This prevents hidden state from persisting across chain reactions
- */
-function createCleanTile(source: Tile, overrides: Partial<Tile>): Tile {
-  return {
-    id: overrides.id ?? source.id,
-    value: overrides.value ?? source.value,
-    row: overrides.row ?? source.row,
-    col: overrides.col ?? source.col,
-    // Only include optional properties if explicitly provided in overrides
-    ...(overrides.scoreValue !== undefined && { scoreValue: overrides.scoreValue }),
-    ...(overrides.isMoving && { isMoving: overrides.isMoving }),
-    ...(overrides.isDividing && { isDividing: overrides.isDividing }),
-    ...(overrides.isChaining && { isChaining: overrides.isChaining }),
-    ...(overrides.isNew && { isNew: overrides.isNew }),
-    ...(overrides.isDisappearing && { isDisappearing: overrides.isDisappearing }),
-    ...(overrides.isPowerEliminating && { isPowerEliminating: overrides.isPowerEliminating }),
-    ...(overrides.powerType && { powerType: overrides.powerType }),
-    ...(overrides.mergeHighlight && { mergeHighlight: overrides.mergeHighlight }),
-    ...(overrides.isHighlighting && { isHighlighting: overrides.isHighlighting }),
-  };
-}
+import { createCleanTile } from './utils/tileHelpers';
 
 /**
  * Get all tiles adjacent to a given tile
