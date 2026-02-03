@@ -9,6 +9,30 @@ import type { Tile } from './types';
 import { isDivisor, checkPerfectPowerElimination, checkEqualValueElimination, checkMultiTileFactorization } from './gameLogic';
 
 /**
+ * Helper function to create a clean tile with only essential properties
+ * This prevents hidden state from persisting across chain reactions
+ */
+function createCleanTile(source: Tile, overrides: Partial<Tile>): Tile {
+  return {
+    id: overrides.id ?? source.id,
+    value: overrides.value ?? source.value,
+    row: overrides.row ?? source.row,
+    col: overrides.col ?? source.col,
+    // Only include optional properties if explicitly provided in overrides
+    ...(overrides.scoreValue !== undefined && { scoreValue: overrides.scoreValue }),
+    ...(overrides.isMoving && { isMoving: overrides.isMoving }),
+    ...(overrides.isDividing && { isDividing: overrides.isDividing }),
+    ...(overrides.isChaining && { isChaining: overrides.isChaining }),
+    ...(overrides.isNew && { isNew: overrides.isNew }),
+    ...(overrides.isDisappearing && { isDisappearing: overrides.isDisappearing }),
+    ...(overrides.isPowerEliminating && { isPowerEliminating: overrides.isPowerEliminating }),
+    ...(overrides.powerType && { powerType: overrides.powerType }),
+    ...(overrides.mergeHighlight && { mergeHighlight: overrides.mergeHighlight }),
+    ...(overrides.isHighlighting && { isHighlighting: overrides.isHighlighting }),
+  };
+}
+
+/**
  * Get all tiles adjacent to a given tile
  */
 function getAdjacentTiles(
@@ -103,24 +127,22 @@ function processSingleIteration(
         // Update center tile
         if (centerNewValue === 1) {
           // Center disappears
-          result.push({
-            ...tile,
+          result.push(createCleanTile(tile, {
             id: currentTileId++,
             value: 0,
             scoreValue: tile.value,
             isDisappearing: true,
             isChaining: true,
             mergeHighlight: true,
-          });
+          }));
         } else {
           // Center gets new value
-          result.push({
-            ...tile,
+          result.push(createCleanTile(tile, {
             id: currentTileId++,
             value: centerNewValue,
             isChaining: true,
             mergeHighlight: true,
-          });
+          }));
         }
 
         // Update adjacent tiles
@@ -136,24 +158,22 @@ function processSingleIteration(
 
           if (newValue === 1) {
             // Adjacent tile disappears
-            result.push({
-              ...adjacentTile,
+            result.push(createCleanTile(adjacentTile, {
               id: currentTileId++,
               value: 0,
               scoreValue: adjacentTile.value,
               isDisappearing: true,
               isChaining: true,
               mergeHighlight: true,
-            });
+            }));
           } else {
             // Adjacent tile gets new value
-            result.push({
-              ...adjacentTile,
+            result.push(createCleanTile(adjacentTile, {
               id: currentTileId++,
               value: newValue,
               isChaining: true,
               mergeHighlight: true,
-            });
+            }));
           }
         }
 
@@ -176,8 +196,7 @@ function processSingleIteration(
         const powerType = checkPerfectPowerElimination(tile.value, adjacentTile.value);
 
         // Both tiles disappear
-        result.push({
-          ...tile,
+        result.push(createCleanTile(tile, {
           id: currentTileId++,
           value: 0,
           scoreValue: tile.value,
@@ -186,10 +205,9 @@ function processSingleIteration(
           powerType: powerType || undefined,
           isChaining: true,
           mergeHighlight: true,
-        });
+        }));
 
-        result.push({
-          ...adjacentTile,
+        result.push(createCleanTile(adjacentTile, {
           id: currentTileId++,
           value: 0,
           scoreValue: adjacentTile.value,
@@ -198,7 +216,7 @@ function processSingleIteration(
           powerType: powerType || undefined,
           isChaining: true,
           mergeHighlight: true,
-        });
+        }));
 
         break;  // Stop checking other adjacent tiles
       }
@@ -229,8 +247,7 @@ function processSingleIteration(
         scoreGained += adjacentTile.value * chainMultiplier;
 
         // Current tile (smaller) disappears
-        result.push({
-          ...tile,
+        result.push(createCleanTile(tile, {
           id: currentTileId++,
           value: 0,
           scoreValue: tile.value,
@@ -238,13 +255,12 @@ function processSingleIteration(
           isChaining: true,
           isDividing: true,
           mergeHighlight: true,
-        });
+        }));
 
         // Adjacent tile (larger) is divided
         if (newValue === 1) {
           // Also disappears
-          result.push({
-            ...adjacentTile,
+          result.push(createCleanTile(adjacentTile, {
             id: currentTileId++,
             value: 0,
             scoreValue: adjacentTile.value,
@@ -252,18 +268,17 @@ function processSingleIteration(
             isChaining: true,
             isDividing: true,
             mergeHighlight: true,
-          });
+          }));
         } else {
           // Gets new value
-          result.push({
-            ...adjacentTile,
+          result.push(createCleanTile(adjacentTile, {
             id: currentTileId++,
             value: newValue,
             scoreValue: adjacentTile.value,
             isChaining: true,
             isDividing: true,
             mergeHighlight: true,
-          });
+          }));
         }
 
         break;  // Only merge with one adjacent tile per iteration
