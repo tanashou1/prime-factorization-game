@@ -354,11 +354,14 @@ export default function Game() {
         moved = true;
       }
       
-      const posKey = `${newRow},${newCol}`;
-      if (!occupiedPositions.has(posKey)) {
-        const finalTile = { ...tile, row: newRow, col: newCol, isMoving: true };
-        movedTiles.push(finalTile);
-        occupiedPositions.set(posKey, finalTile);
+      // Only add tile to movedTiles if it hasn't been merged
+      if (!mergedTileIds.has(tile.id)) {
+        const posKey = `${newRow},${newCol}`;
+        if (!occupiedPositions.has(posKey)) {
+          const finalTile = { ...tile, row: newRow, col: newCol, isMoving: true };
+          movedTiles.push(finalTile);
+          occupiedPositions.set(posKey, finalTile);
+        }
       }
       
       // Store the path for this tile
