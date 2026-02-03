@@ -78,7 +78,21 @@ export function processTileRemoval(
     
     // Check each adjacent tile
     for (const adjacentTile of sortedAdjacent) {
+      // First check for equal value elimination
+      if (movedTile.value === adjacentTile.value) {
+        // Both tiles eliminate each other
+        tilesToRemove.add(movedTile.id);
+        tilesToRemove.add(adjacentTile.id);
+        
+        // Add score for both tiles
+        scoreGained += movedTile.value + adjacentTile.value;
+        
+        // Only process once per moved tile (one pair at a time)
+        break;
+      }
+      
       // Check if adjacent tile's value is a multiple of moved tile's value
+      // (excluding equal values, which are handled above)
       if (adjacentTile.value % movedTile.value === 0 && adjacentTile.value !== movedTile.value) {
         // Delete the moved tile
         tilesToRemove.add(movedTile.id);
@@ -93,7 +107,7 @@ export function processTileRemoval(
         // Add score
         scoreGained += adjacentTile.value;
         
-        // Only process once per moved tile
+        // Only process once per moved tile (one merge at a time)
         break;
       }
     }
