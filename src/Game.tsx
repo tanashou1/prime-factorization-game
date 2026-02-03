@@ -477,6 +477,11 @@ export default function Game() {
       !t.isDividing && 
       !t.isPowerEliminating
     );
+    // Keep track of filtered tiles so we don't lose them
+    const filteredMergedTiles = movedTiles.filter(t => 
+      t.value !== 0 && 
+      (t.mergeHighlight || t.isDividing || t.isPowerEliminating)
+    );
     // Initial chain multiplier is 1 (will increase with each chain iteration)
     const chainResult = processChainReactions(activeTiles, 1, currentNextTileId);
     
@@ -536,8 +541,9 @@ export default function Game() {
       }
     }
     
-    // After chain reactions complete, filter out disappearing tiles
-    let finalTiles = chainResult.tiles;
+    // After chain reactions complete, combine results with filtered merged tiles
+    // This ensures we don't lose tiles that just merged and have animation flags
+    let finalTiles = [...chainResult.tiles, ...filteredMergedTiles.filter(t => t.value !== 0)];
     
     // Add new tile if needed
     const hasDisappearing = disappearingTiles.length > 0 || chainResult.scoreGained > 0;
