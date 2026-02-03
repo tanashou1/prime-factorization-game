@@ -3,6 +3,7 @@ import './Game.css';
 import type { Tile, GameState, GameParams } from './types';
 import { generateRandomTileValue, getEmptyPositions, checkPerfectPowerElimination, checkEqualValueElimination, isDivisor } from './gameLogic';
 import { processChainReactions } from './chainReactionLogic';
+import { createCleanTile } from './utils/tileHelpers';
 import packageJson from '../package.json';
 
 type Direction = 'up' | 'down' | 'left' | 'right';
@@ -194,8 +195,7 @@ export default function Game() {
             const powerType = checkPerfectPowerElimination(tile.value, occupant.value);
             
             // Add both disappearing tiles with appropriate animation
-            movedTiles.push({
-              ...tile,
+            movedTiles.push(createCleanTile(tile, {
               id: currentNextTileId++,
               value: 0,
               scoreValue: tile.value,
@@ -205,9 +205,8 @@ export default function Game() {
               isPowerEliminating: powerType !== null,
               powerType: powerType || undefined,
               mergeHighlight: true, // Highlight merge (Issue #22)
-            });
-            movedTiles.push({
-              ...occupant,
+            }));
+            movedTiles.push(createCleanTile(occupant, {
               id: currentNextTileId++,
               value: 0,
               scoreValue: occupant.value,
@@ -217,7 +216,7 @@ export default function Game() {
               isPowerEliminating: powerType !== null,
               powerType: powerType || undefined,
               mergeHighlight: true, // Highlight merge (Issue #22)
-            });
+            }));
             
             moved = true;
             break;
@@ -246,8 +245,7 @@ export default function Game() {
             
             if (newValue === 1) {
               // Tile disappears, add score - mark with isDisappearing
-              movedTiles.push({
-                ...tile,
+              movedTiles.push(createCleanTile(tile, {
                 id: mergedTileId, // Assign unique ID to merged tile
                 value: 0, // Mark for removal
                 scoreValue: mergedScore,
@@ -256,10 +254,9 @@ export default function Game() {
                 isDividing: true, // Mark for division effect
                 isDisappearing: true, // Mark for disappear animation
                 mergeHighlight: true, // Highlight merge (Issue #22)
-              });
+              }));
             } else {
-              const mergedTile = {
-                ...occupant,
+              const mergedTile = createCleanTile(occupant, {
                 id: mergedTileId, // Assign unique ID to merged tile
                 value: newValue,
                 scoreValue: mergedScore,
@@ -267,7 +264,7 @@ export default function Game() {
                 col: nextCol,
                 isDividing: true, // Mark for division effect
                 mergeHighlight: true, // Highlight merge (Issue #22)
-              };
+              });
               movedTiles.push(mergedTile);
               occupiedPositions.set(posKey, mergedTile);
             }
@@ -300,8 +297,7 @@ export default function Game() {
             
             if (newValue === 1) {
               // Mark for removal and disappear animation
-              movedTiles.push({
-                ...tile,
+              movedTiles.push(createCleanTile(tile, {
                 id: mergedTileId, // Assign unique ID to merged tile
                 value: 0,
                 scoreValue: mergedScore,
@@ -310,10 +306,9 @@ export default function Game() {
                 isDividing: true, // Mark for division effect
                 isDisappearing: true, // Mark for disappear animation
                 mergeHighlight: true, // Highlight merge (Issue #22)
-              });
+              }));
             } else {
-              const mergedTile = {
-                ...tile,
+              const mergedTile = createCleanTile(tile, {
                 id: mergedTileId, // Assign unique ID to merged tile
                 value: newValue,
                 scoreValue: mergedScore,
@@ -321,7 +316,7 @@ export default function Game() {
                 col: nextCol,
                 isDividing: true, // Mark for division effect
                 mergeHighlight: true, // Highlight merge (Issue #22)
-              };
+              });
               movedTiles.push(mergedTile);
               occupiedPositions.set(posKey, mergedTile);
             }
@@ -354,7 +349,11 @@ export default function Game() {
       if (!mergedTileIds.has(tile.id)) {
         const posKey = `${newRow},${newCol}`;
         if (!occupiedPositions.has(posKey)) {
-          const finalTile = { ...tile, row: newRow, col: newCol, isMoving: true };
+          const finalTile = createCleanTile(tile, {
+            row: newRow,
+            col: newCol,
+            isMoving: true,
+          });
           movedTiles.push(finalTile);
           occupiedPositions.set(posKey, finalTile);
         }
@@ -389,7 +388,11 @@ export default function Game() {
       const intermediateState = movedTiles.map(tile => {
         const path = tileMovementPaths.get(tile.id);
         if (path && step < path.length) {
-          return { ...tile, row: path[step].row, col: path[step].col, isMoving: true };
+          return createCleanTile(tile, {
+            row: path[step].row,
+            col: path[step].col,
+            isMoving: true,
+          });
         }
         return tile;
       });
@@ -554,15 +557,11 @@ export default function Game() {
         const clearedTiles = prevState.tiles
           .filter(t => t.value !== 0)
           .map(t => ({
-            ...t,
-            isMoving: false,
-            isDividing: false,
-            isChaining: false,
-            isNew: false,
-            isPowerEliminating: false,
-            powerType: undefined,
-            mergeHighlight: false, // Clear merge highlight (Issue #22)
-            isHighlighting: false, // Clear highlighting (Issue #35)
+            id: t.id,
+            value: t.value,
+            row: t.row,
+            col: t.col,
+            // Remove all animation-related properties
           }));
         
         return {
