@@ -467,6 +467,7 @@ export default function Game() {
     
     // Process chain reactions after initial merges
     const activeTiles = movedTiles.filter(t => t.value !== 0);
+    // Initial chain multiplier is 1 (will increase with each chain iteration)
     const chainResult = processChainReactions(activeTiles, 1, currentNextTileId);
     
     // Update currentNextTileId from chain reactions
@@ -504,7 +505,7 @@ export default function Game() {
           setGameState(prevState => ({
             ...prevState,
             tiles: highlightedTiles,
-            score: score + scoreGained,
+            // Don't update score during animation, only at the end
             moveCount: newMoveCount,
           }));
           
@@ -516,7 +517,7 @@ export default function Game() {
         setGameState(prevState => ({
           ...prevState,
           tiles: stepTiles,
-          score: score + scoreGained,
+          // Don't update score during animation, only at the end
           moveCount: newMoveCount,
         }));
         
