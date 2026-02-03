@@ -543,7 +543,7 @@ export default function Game() {
     
     // After chain reactions complete, combine results with filtered merged tiles
     // This ensures we don't lose tiles that just merged and have animation flags
-    let finalTiles = [...chainResult.tiles, ...filteredMergedTiles.filter(t => t.value !== 0)];
+    let finalTiles = [...chainResult.tiles, ...filteredMergedTiles];
     
     // Add new tile if needed
     const hasDisappearing = disappearingTiles.length > 0 || chainResult.scoreGained > 0;
