@@ -469,7 +469,14 @@ export default function Game() {
     await new Promise(resolve => setTimeout(resolve, 150));
     
     // Process chain reactions after initial merges
-    const activeTiles = movedTiles.filter(t => t.value !== 0);
+    // Filter out tiles that already merged during movement (marked with animation flags)
+    // Chain reactions should only process new adjacent possibilities created by movement
+    const activeTiles = movedTiles.filter(t => 
+      t.value !== 0 && 
+      !t.mergeHighlight && 
+      !t.isDividing && 
+      !t.isPowerEliminating
+    );
     // Initial chain multiplier is 1 (will increase with each chain iteration)
     const chainResult = processChainReactions(activeTiles, 1, currentNextTileId);
     
